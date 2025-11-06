@@ -37,8 +37,8 @@ import { registerTransitTools } from './transit.tools.js';
 export const configSchema = z.object({
   // Middleware API URL
   middlewareUrl: z.string()
-    .default('http://202.61.238.12:8080')
-    .describe('URL of the Malaysia Transit Middleware API. Default: http://202.61.238.12:8080'),
+    .default('https://malaysiatransit.techmavie.digital')
+    .describe('URL of the Malaysia Transit Middleware API. Default: https://malaysiatransit.techmavie.digital'),
 });
 
 /**
@@ -79,7 +79,7 @@ export default function createStatelessServer({
             text: JSON.stringify({
               message: 'Hello from Malaysia Transit MCP!',
               timestamp: new Date().toISOString(),
-              middlewareUrl: process.env.MIDDLEWARE_URL || 'http://202.61.238.12:8080',
+              middlewareUrl: process.env.MIDDLEWARE_URL || 'https://malaysiatransit.techmavie.digital',
             }, null, 2),
           },
         ],

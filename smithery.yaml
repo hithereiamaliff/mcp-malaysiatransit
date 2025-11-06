@@ -4,4 +4,4 @@ config:
   middlewareUrl:
     type: string
     description: "Malaysia Transit Middleware API URL"
-    default: "http://202.61.238.12:8080"
+    default: "https://malaysiatransit.techmavie.digital"
