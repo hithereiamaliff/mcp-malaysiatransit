@@ -8,4 +8,4 @@ config:
   googleMapsApiKey:
     type: string
     description: "Google Maps API Key for geocoding (optional, falls back to Nominatim if not provided)"
-    default: ""
+    default: "AIzaSyClzCRmcl-uWbjuN8VMboVExc0Hi-IyqAI"
