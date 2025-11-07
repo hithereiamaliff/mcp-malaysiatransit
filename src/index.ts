@@ -63,15 +63,15 @@ export default function createStatelessServer({
   // Extract config values
   const { middlewareUrl, googleMapsApiKey } = _config;
   
-  // Set middleware URL in process.env if provided in config
-  if (middlewareUrl) {
-    process.env.MIDDLEWARE_URL = middlewareUrl;
-    console.log(`Using middleware URL: ${middlewareUrl}`);
-  }
+  // Set middleware URL: prioritize environment variable, then config, then default
+  const finalMiddlewareUrl = process.env.MIDDLEWARE_URL || middlewareUrl;
+  process.env.MIDDLEWARE_URL = finalMiddlewareUrl;
+  console.log(`Using middleware URL: ${finalMiddlewareUrl}`);
   
-  // Set Google Maps API key in process.env if provided in config
-  if (googleMapsApiKey) {
-    process.env.GOOGLE_MAPS_API_KEY = googleMapsApiKey;
+  // Set Google Maps API key: prioritize environment variable, then config
+  const finalApiKey = process.env.GOOGLE_MAPS_API_KEY || googleMapsApiKey;
+  if (finalApiKey) {
+    process.env.GOOGLE_MAPS_API_KEY = finalApiKey;
     console.log(`Google Maps API key configured for geocoding`);
   } else {
     console.log(`No Google Maps API key provided, will use Nominatim for geocoding`);
