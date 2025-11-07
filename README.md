@@ -506,16 +506,16 @@ The `detect_location_area` tool automatically maps common locations to service a
 
 | User Says | Area ID |
 |-----------|---------|
-| Penang Island, Seberang Perai | `penang` |
-| Kuala Lumpur, Selangor, Putrajaya | `klang-valley` |
-| Kuantan (Pahang) | `kuantan` |
-| Kangar (Perlis) | `kangar` |
-| Alor Setar (Kedah) | `alor-setar` |
-| Kota Bharu (Kelantan) | `kota-bharu` |
-| Kuala Terengganu (Terengganu) | `kuala-terengganu` |
-| Bandaraya Melaka (Melaka) | `melaka` |
-| Johor Bahru (Johor) | `johor` |
-| Kuching (Sarawak) | `kuching` |
+| George Town, Seberang Jaya, Bayan Lepas, Bukit Mertajam | `penang` |
+| KLCC, Shah Alam, Putrajaya | `klang-valley` |
+| Kuantan, Pekan, Bandar Indera Mahkota | `kuantan` |
+| Kangar, Arau, Kuala Perlis, Padang Besar | `kangar` |
+| Alor Setar, Sungai Petani, Pendang, Jitra | `alor-setar` |
+| Kota Bharu, Rantau Panjang, Bachok, Machang, Jeli | `kota-bharu` |
+| Kuala Terengganu, Merang, Marang, Setiu | `kuala-terengganu` |
+| Melaka, Tampin, Jasin, Masjid Tanah | `melaka` |
+| Johor Bahru, Iskandar Puteri, Pasir Gudang, Kulai | `johor` |
+| Kuching, Bau, Serian, Bako, Siniawan, Matang | `kuching` |
 
 ## Deployment
 
@@ -606,7 +606,6 @@ malaysiatransit-mcp/
 
 ## Related Projects
 
-- **[Malaysia Transit Middleware](https://github.com/hithereiamaliff/malaysiatransit-middleware)** - The backend API this MCP connects to
 - **[Malaysia Open Data MCP](https://github.com/hithereiamaliff/mcp-datagovmy)** - MCP for Malaysia's open data portal
 
 ## Contributing
