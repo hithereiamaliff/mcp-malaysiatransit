@@ -6,6 +6,21 @@ MCP (Model Context Protocol) server for Malaysia's public transit system, provid
 
 **Data Source:** [Malaysia Transit Middleware](https://github.com/hithereiamaliff/malaysiatransit-middleware)
 
+## Table of Contents
+
+- [Features](#features)
+- [Architecture](#architecture)
+- [Quick Start](#quick-start)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Available Tools](#available-tools)
+- [Usage Examples](#usage-examples)
+- [AI Integration Guide](#ai-integration-guide)
+- [Supported Service Areas](#supported-service-areas)
+- [Deployment](#deployment)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+
 ## Features
 
 - **10 Operational Service Areas** across Malaysia
@@ -19,6 +34,7 @@ MCP (Model Context Protocol) server for Malaysia's public transit system, provid
 - **Arrival Predictions** - Get real-time arrival times at stops
 - **Multi-Modal Support** - Both bus and rail services
 - **Provider Status Monitoring** - Check operational status of transit providers
+- **Location Detection** - Automatically detect service areas using geocoding
 
 ## Architecture
 
@@ -34,10 +50,81 @@ Malaysia Transit Middleware API
 Malaysia Open Data Portal (GTFS Static & Realtime)
 ```
 
-## Documentation
+## Quick Start
 
-- **[TOOLS.md](./TOOLS.md)** - Detailed information about available tools
-- **[PROMPT.md](./PROMPT.md)** - AI integration guidelines and usage patterns
+### Local Testing with Smithery Playground
+
+#### Step 1: Start Your Middleware
+
+First, ensure your Malaysia Transit Middleware is running:
+
+```bash
+cd path/to/malaysiatransit-middleware
+npm run dev
+```
+
+The middleware should be running on `http://localhost:3000`.
+
+#### Step 2: Configure Environment
+
+Create a `.env` file in the MCP project root:
+
+```bash
+cd malaysiatransit-mcp
+cp .env.sample .env
+```
+
+Edit `.env`:
+```env
+MIDDLEWARE_URL=http://localhost:3000
+GOOGLE_MAPS_API_KEY=your_api_key_here  # Optional, for location detection
+```
+
+#### Step 3: Start Smithery Dev Server
+
+```bash
+npm install
+npm run dev
+```
+
+This will:
+1. Build your MCP server
+2. Start the Smithery CLI in development mode
+3. Open the Smithery playground in your browser
+
+#### Step 4: Test in Smithery Playground
+
+In the Smithery playground interface:
+
+1. **Test the hello tool:**
+   ```
+   Call: hello
+   ```
+   Expected: Returns server info and middleware URL
+
+2. **List service areas:**
+   ```
+   Call: list_service_areas
+   ```
+   Expected: Returns all available transit areas
+
+3. **Search for stops:**
+   ```
+   Call: search_stops
+   Parameters:
+     area: "penang"
+     query: "Komtar"
+   ```
+   Expected: Returns matching stops
+
+4. **Get real-time arrivals:**
+   ```
+   Call: get_stop_arrivals
+   Parameters:
+     area: "penang"
+     stopId: "<stop_id_from_search>"
+   ```
+   Expected: Returns upcoming bus arrivals
 
 ## Installation
 
@@ -49,26 +136,25 @@ npm install
 
 ### Environment Variables
 
-Create a `.env` file in the root directory:
+The MCP server uses environment variables for configuration. When deployed to Smithery, set these in the deployment settings:
 
-```env
-# Malaysia Transit Middleware API URL
-MIDDLEWARE_URL=http://localhost:3000
-```
+- **`MIDDLEWARE_URL`** (required): Malaysia Transit Middleware API URL
+  - Local: `http://localhost:3000`
+  - Production: Your deployed middleware URL (e.g., `https://malaysiatransit.techmavie.digital`)
 
-For production, set this to your deployed middleware URL (e.g., `https://your-middleware.onrender.com`).
+- **`GOOGLE_MAPS_API_KEY`** (optional): Google Maps API key for location detection
+  - If not provided, falls back to Nominatim (free but less accurate)
+  - Get your API key from [Google Cloud Console](https://console.cloud.google.com/)
 
-## Development
+### Development
 
-To run the MCP server in development mode with Smithery playground:
+To run the MCP server in development mode:
 
 ```bash
 npm run dev
 ```
 
-This will start the Smithery CLI in development mode, allowing you to test the MCP server locally before deployment.
-
-## Build
+### Build
 
 To build the MCP server for deployment:
 
@@ -76,71 +162,166 @@ To build the MCP server for deployment:
 npm run build
 ```
 
-## Deployment to Smithery
-
-This MCP is designed to be deployed to Smithery. Follow these steps:
-
-1. **Build the project:**
-   ```bash
-   npm run build
-   ```
-
-2. **Deploy to Smithery:**
-   ```bash
-   npm run deploy
-   ```
-
-3. **Configure in Smithery:**
-   - Set `middlewareUrl` to your Malaysia Transit Middleware API URL
-   - Default: `http://localhost:3000` (for local testing)
-   - Production: Your deployed middleware URL
-
 ## Available Tools
 
 ### Service Area Discovery
 
-- **`list_service_areas`** - List all available transit areas in Malaysia
-- **`get_area_info`** - Get detailed information about a specific area
+#### `list_service_areas`
+List all available transit areas in Malaysia.
+
+**Parameters:** None
+
+**Returns:** List of service areas with their IDs, names, and capabilities.
+
+**Example:**
+```typescript
+const areas = await tools.list_service_areas();
+```
+
+#### `get_area_info`
+Get detailed information about a specific area.
+
+**Parameters:**
+- `areaId` (string): Service area ID (e.g., "penang", "klang-valley")
+
+**Example:**
+```typescript
+const info = await tools.get_area_info({ areaId: "penang" });
+```
+
+### Location Detection
+
+#### `detect_location_area` ⭐
+Automatically detect which transit service area a location belongs to using geocoding.
+
+**Parameters:**
+- `location` (string): Location name or place (e.g., "KTM Alor Setar", "Komtar", "KLCC")
+
+**Returns:** Detected area ID, confidence level, and location details.
+
+**Example:**
+```typescript
+const result = await tools.detect_location_area({ location: "KTM Alor Setar" });
+// Returns: { area: "alor-setar", confidence: "high" }
+```
 
 ### Stop Information
 
-- **`search_stops`** - Search for stops by name
-- **`get_stop_details`** - Get detailed information about a stop
-- **`get_stop_arrivals`** - Get real-time arrival predictions ⭐
-- **`find_nearby_stops`** - Find stops near a location (lat/lon)
+#### `search_stops`
+Search for stops by name. Use `detect_location_area` first if unsure about the area.
+
+**Parameters:**
+- `area` (string): Service area ID
+- `query` (string): Search query (e.g., "Komtar", "KLCC")
+
+**Example:**
+```typescript
+const stops = await tools.search_stops({
+  area: "penang",
+  query: "Komtar"
+});
+```
+
+#### `get_stop_details`
+Get detailed information about a stop.
+
+**Parameters:**
+- `area` (string): Service area ID
+- `stopId` (string): Stop ID from search results
+
+#### `get_stop_arrivals` ⭐
+Get real-time arrival predictions at a stop.
+
+**Parameters:**
+- `area` (string): Service area ID
+- `stopId` (string): Stop ID from search results
+
+**Example:**
+```typescript
+const arrivals = await tools.get_stop_arrivals({
+  area: "penang",
+  stopId: "stop_123"
+});
+```
+
+#### `find_nearby_stops`
+Find stops near a location.
+
+**Parameters:**
+- `area` (string): Service area ID
+- `lat` (number): Latitude coordinate
+- `lon` (number): Longitude coordinate
+- `radius` (number, optional): Search radius in meters (default: 500)
 
 ### Route Information
 
-- **`list_routes`** - List all routes in an area
-- **`get_route_details`** - Get detailed route information
-- **`get_route_geometry`** - Get route path for map visualization
+#### `list_routes`
+List all routes in an area.
+
+**Parameters:**
+- `area` (string): Service area ID
+
+#### `get_route_details`
+Get detailed route information.
+
+**Parameters:**
+- `area` (string): Service area ID
+- `routeId` (string): Route ID from list_routes
+
+#### `get_route_geometry`
+Get route path for map visualization.
+
+**Parameters:**
+- `area` (string): Service area ID
+- `routeId` (string): Route ID from list_routes
 
 ### Real-time Data
 
-- **`get_live_vehicles`** - Get real-time vehicle positions ⭐
-- **`get_provider_status`** - Check provider operational status
+#### `get_live_vehicles` ⭐
+Get real-time vehicle positions.
+
+**Parameters:**
+- `area` (string): Service area ID
+- `type` (enum, optional): Filter by type ('bus' or 'rail')
+
+**Example:**
+```typescript
+const vehicles = await tools.get_live_vehicles({ area: "penang" });
+```
+
+#### `get_provider_status`
+Check provider operational status.
+
+**Parameters:**
+- `area` (string): Service area ID
 
 ### Testing
 
-- **`hello`** - Simple test tool to verify server is working
+#### `hello`
+Simple test tool to verify server is working.
 
 ## Usage Examples
 
 ### Find When Your Bus is Coming
 
 ```typescript
-// 1. Search for your stop
-const stops = await tools.search_stops({
-  area: "penang",
-  query: "Komtar"
+// 1. Detect area from location
+const areaResult = await tools.detect_location_area({
+  location: "KTM Alor Setar"
 });
 
-// 2. Get real-time arrivals
+// 2. Search for your stop
+const stops = await tools.search_stops({
+  area: areaResult.area,
+  query: "KTM Alor Setar"
+});
+
+// 3. Get real-time arrivals
 const arrivals = await tools.get_stop_arrivals({
-  area: "penang",
+  area: areaResult.area,
   stopId: stops[0].id
 });
-// Returns: "Bus T101 arrives in 5 minutes, Bus T201 in 12 minutes"
+// Returns: "Bus K100(I) arrives in 1 minute, Bus K100(O) in 2 minutes"
 ```
 
 ### Track Live Buses
@@ -173,17 +354,123 @@ const routeDetails = await tools.get_route_details({
 });
 ```
 
-## AI Integration
+## AI Integration Guide
 
-When integrating with AI assistants:
+### Key Use Cases
 
-1. **Always start with `list_service_areas`** to discover available areas
-2. **Use `search_stops`** to find stops by name
-3. **Use `get_stop_arrivals`** for the key use case: "When is my bus coming?"
-4. **Use `get_live_vehicles`** to track buses/trains in real-time
-5. **All tools require an `area` parameter** (e.g., 'penang', 'klang-valley')
+#### 1. "When is my bus coming?" ⭐
 
-Refer to [PROMPT.md](./PROMPT.md) for comprehensive AI integration guidelines.
+This is the PRIMARY use case. Users want to know when their next bus/train will arrive.
+
+**Workflow:**
+```
+1. User asks: "When is the next bus at Komtar?"
+2. AI uses: detect_location_area({ location: "Komtar" })
+3. AI uses: search_stops({ area: "penang", query: "Komtar" })
+4. AI uses: get_stop_arrivals({ area: "penang", stopId: "..." })
+5. AI responds: "Bus T101 arrives in 5 minutes, Bus T201 in 12 minutes"
+```
+
+#### 2. "Where is my bus right now?"
+
+Users want to track their bus in real-time.
+
+**Workflow:**
+```
+1. User asks: "Where is bus T101 right now?"
+2. AI uses: detect_location_area({ location: "Penang" })
+3. AI uses: get_live_vehicles({ area: "penang" })
+4. AI filters for route T101
+5. AI responds: "Bus T101 is currently at [location], heading towards Airport"
+```
+
+### Tool Usage Patterns
+
+#### Always Start with Location Detection
+
+When a user mentions a location without specifying the area, use location detection:
+
+```typescript
+// User: "When is the next bus at KTM Alor Setar?"
+const areaResult = await tools.detect_location_area({ 
+  location: "KTM Alor Setar" 
+});
+// Returns: { area: "alor-setar", confidence: "high" }
+```
+
+#### Search Before Details
+
+Always search for stops/routes before requesting details:
+
+```typescript
+// ✅ CORRECT
+const stops = await tools.search_stops({ area: "penang", query: "Komtar" });
+const arrivals = await tools.get_stop_arrivals({ 
+  area: "penang", 
+  stopId: stops[0].id 
+});
+
+// ❌ WRONG - Don't guess stop IDs
+const arrivals = await tools.get_stop_arrivals({ 
+  area: "penang", 
+  stopId: "random_id" 
+});
+```
+
+### Response Formatting
+
+#### Arrival Times
+
+Format arrival times in a user-friendly way:
+
+```typescript
+// ✅ GOOD
+"Bus T101 arrives in 5 minutes"
+"Train LRT-KJ arrives in 2 minutes"
+"Next bus: T201 in 12 minutes"
+
+// ❌ BAD
+"Arrival time: 2025-01-07T14:30:00Z"
+"ETA: 1736258400000"
+```
+
+#### Multiple Arrivals
+
+Present multiple arrivals clearly:
+
+```typescript
+"Upcoming arrivals at Komtar:
+• T101 → Airport: 5 minutes
+• T201 → Bayan Lepas: 12 minutes
+• T102 → Gurney: 18 minutes"
+```
+
+### Error Handling
+
+#### Provider Unavailable
+
+```typescript
+try {
+  const arrivals = await tools.get_stop_arrivals({ ... });
+} catch (error) {
+  // Check provider status
+  const status = await tools.get_provider_status({ area: "penang" });
+  
+  if (status.providers[0].status !== "active") {
+    "The transit provider is currently unavailable. 
+     Please try again later or check the official transit app."
+  }
+}
+```
+
+### Best Practices
+
+1. **Use location detection** when users mention place names
+2. **Always specify area** for every tool (except `list_service_areas` and `detect_location_area`)
+3. **Search before details** - don't guess IDs
+4. **Handle errors gracefully** - providers may have temporary outages
+5. **Format responses clearly** - use minutes, not timestamps
+6. **Don't cache real-time data** - it updates every 30 seconds
 
 ## Supported Service Areas
 
@@ -200,34 +487,48 @@ Refer to [PROMPT.md](./PROMPT.md) for comprehensive AI integration guidelines.
 | `johor` | Johor Bahru | BAS.MY Johor Bahru | Bus |
 | `kuching` | Kuching | BAS.MY Kuching | Bus |
 
-## Local Testing
+### Location to Area Mapping
 
-To test locally before deploying:
+The `detect_location_area` tool automatically maps common locations to service areas:
 
-```bash
-# Install dependencies
-npm install
+| User Says | Area ID |
+|-----------|---------|
+| Penang Island, Seberang Perai | `penang` |
+| Kuala Lumpur, Selangor, Putrajaya | `klang-valley` |
+| Kuantan, Pahang | `kuantan` |
+| Kangar, Perlis | `kangar` |
+| Alor Setar, Kedah | `alor-setar` |
+| Kota Bharu, Kelantan | `kota-bharu` |
+| Kuala Terengganu, Terengganu | `kuala-terengganu` |
+| Bandaraya Melaka, Melaka | `melaka` |
+| Johor Bahru, Johor | `johor` |
+| Kuching, Sarawak | `kuching` |
 
-# Start development server
-npm run dev
+## Deployment
+
+### Deploy to Smithery
+
+This MCP is designed to be deployed to Smithery:
+
+1. **Push to GitHub:**
+   ```bash
+   git push origin main
+   ```
+
+2. **Smithery will auto-deploy** from your GitHub repository
+
+3. **Configure Environment Variables in Smithery:**
+   - Go to Settings → Environment
+   - Add `MIDDLEWARE_URL`: Your deployed middleware URL
+   - Add `GOOGLE_MAPS_API_KEY`: Your Google Maps API key (optional)
+
+### Environment Configuration
+
+Set these environment variables in Smithery deployment settings:
+
 ```
-
-Then test in the Smithery playground interface that opens in your browser.
-
-## Project Structure
-
-```
-malaysiatransit-mcp/
-├── src/
-│   ├── index.ts           # Main MCP server entry point
-│   └── transit.tools.ts   # Transit tool implementations
-├── package.json           # Project dependencies
-├── tsconfig.json          # TypeScript configuration
-├── smithery.yaml          # Smithery configuration
-├── README.md              # This file
-├── TOOLS.md               # Detailed tool documentation
-├── PROMPT.md              # AI integration guide
-└── LICENSE                # MIT License
+MIDDLEWARE_URL=https://malaysiatransit.techmavie.digital
+GOOGLE_MAPS_API_KEY=your_api_key_here
 ```
 
 ## Troubleshooting
@@ -239,6 +540,7 @@ If you can't connect to the middleware:
 1. Verify your `MIDDLEWARE_URL` is correct
 2. Ensure the middleware is running and accessible
 3. Check network connectivity
+4. Test middleware directly: `curl https://your-middleware-url/api/areas`
 
 ### No Data Returned
 
@@ -256,10 +558,38 @@ Real-time data depends on the upstream GTFS providers:
 2. Some providers may have temporary outages
 3. Check the middleware logs for API issues
 
+### Location Detection Not Working
+
+If location detection returns incorrect results:
+
+1. Ensure `GOOGLE_MAPS_API_KEY` is set in environment variables
+2. Check Google Cloud Console for API quota limits
+3. Verify the API key has Geocoding API enabled
+4. Falls back to Nominatim if Google Maps fails
+
 ## Requirements
 
 - **Node.js**: >= 18.0.0
 - **Malaysia Transit Middleware**: Running instance (local or deployed)
+- **Google Maps API Key**: Optional, for enhanced location detection
+
+## Project Structure
+
+```
+malaysiatransit-mcp/
+├── src/
+│   ├── index.ts              # Main MCP server entry point
+│   ├── transit.tools.ts      # Transit tool implementations
+│   ├── geocoding.utils.ts    # Location detection utilities
+│   ├── inspector.ts          # MCP Inspector entry point
+│   └── server.ts             # HTTP server for testing
+├── package.json              # Project dependencies
+├── tsconfig.json             # TypeScript configuration
+├── smithery.yaml             # Smithery configuration
+├── .env.sample               # Environment variables template
+├── README.md                 # This file
+└── LICENSE                   # MIT License
+```
 
 ## Related Projects
 
@@ -280,6 +610,8 @@ MIT - See [LICENSE](./LICENSE) file for details.
 - [Prasarana Malaysia](https://www.prasarana.com.my/) for Rapid KL services
 - [BAS.MY](https://bas.my/) for regional bus services
 - [Smithery](https://smithery.ai/) for the MCP framework
+- [Google Maps Platform](https://developers.google.com/maps) for geocoding services
+- [OpenStreetMap Nominatim](https://nominatim.openstreetmap.org/) for fallback geocoding
 
 ---
 
