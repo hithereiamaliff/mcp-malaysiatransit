@@ -1,15 +1,23 @@
 /**
- * Geocoding utilities using Nominatim API
+ * Geocoding utilities using Google Maps API (primary) and Nominatim (fallback)
  * Maps Malaysian locations to transit service areas
  */
 
 import axios from 'axios';
 
-// Nominatim API endpoint
+// Google Maps API endpoint
+const GOOGLE_MAPS_API = 'https://maps.googleapis.com/maps/api/geocode/json';
+
+// Nominatim API endpoint (fallback)
 const NOMINATIM_API = 'https://nominatim.openstreetmap.org';
 
 // User agent for Nominatim (required by usage policy)
 const USER_AGENT = 'MalaysiaTransitMCP/1.0';
+
+// Get Google Maps API key from environment
+const getGoogleMapsApiKey = (): string | undefined => {
+  return process.env.GOOGLE_MAPS_API_KEY;
+};
 
 // Mapping of Malaysian states/regions to transit service areas
 const STATE_TO_AREA_MAP: Record<string, string> = {
@@ -133,7 +141,7 @@ export async function detectAreaFromLocation(query: string): Promise<GeocodingRe
     }
   }
   
-  // 3. Use Nominatim geocoding as fallback
+  // 3. Use geocoding as fallback (Google Maps or Nominatim)
   try {
     const geocodingResult = await geocodeLocation(query);
     if (geocodingResult) {
@@ -147,9 +155,99 @@ export async function detectAreaFromLocation(query: string): Promise<GeocodingRe
 }
 
 /**
- * Geocode a location using Nominatim API
+ * Geocode a location using Google Maps API (primary) or Nominatim (fallback)
  */
 async function geocodeLocation(query: string): Promise<GeocodingResult | null> {
+  const apiKey = getGoogleMapsApiKey();
+  
+  // Try Google Maps first if API key is available
+  if (apiKey) {
+    try {
+      const result = await geocodeWithGoogleMaps(query, apiKey);
+      if (result) return result;
+    } catch (error: any) {
+      console.error('Google Maps geocoding failed, falling back to Nominatim:', error.message);
+    }
+  }
+  
+  // Fallback to Nominatim
+  return await geocodeWithNominatim(query);
+}
+
+/**
+ * Geocode using Google Maps Geocoding API
+ */
+async function geocodeWithGoogleMaps(query: string, apiKey: string): Promise<GeocodingResult | null> {
+  try {
+    // Add "Malaysia" to the query if not already present
+    const searchQuery = query.toLowerCase().includes('malaysia') 
+      ? query 
+      : `${query}, Malaysia`;
+    
+    const response = await axios.get(GOOGLE_MAPS_API, {
+      params: {
+        address: searchQuery,
+        key: apiKey,
+        region: 'my', // Bias results to Malaysia
+        components: 'country:MY', // Restrict to Malaysia
+      },
+      timeout: 5000,
+    });
+    
+    if (response.data.status === 'OK' && response.data.results.length > 0) {
+      const result = response.data.results[0];
+      const addressComponents = result.address_components || [];
+      
+      // Extract state information from address components
+      let state = '';
+      for (const component of addressComponents) {
+        if (component.types.includes('administrative_area_level_1')) {
+          state = component.long_name.toLowerCase();
+          break;
+        }
+      }
+      
+      // Try to map state to area
+      let area = STATE_TO_AREA_MAP[state];
+      
+      // If no state match, try searching in the formatted address
+      if (!area) {
+        const formattedAddress = result.formatted_address.toLowerCase();
+        for (const [key, value] of Object.entries(STATE_TO_AREA_MAP)) {
+          if (formattedAddress.includes(key)) {
+            area = value;
+            break;
+          }
+        }
+      }
+      
+      if (area) {
+        return {
+          area,
+          confidence: 'high', // Google Maps is more accurate
+          location: {
+            name: result.formatted_address,
+            state: state,
+            country: 'Malaysia',
+            lat: result.geometry.location.lat,
+            lon: result.geometry.location.lng,
+          },
+          source: 'geocoding',
+        };
+      }
+    }
+  } catch (error: any) {
+    console.error('Google Maps API error:', error.message);
+    throw error;
+  }
+  
+  return null;
+}
+
+/**
+ * Geocode using Nominatim API (fallback)
+ */
+async function geocodeWithNominatim(query: string): Promise<GeocodingResult | null> {
   try {
     // Add "Malaysia" to the query if not already present
     const searchQuery = query.toLowerCase().includes('malaysia') 

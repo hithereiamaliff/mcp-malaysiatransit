@@ -5,3 +5,7 @@ config:
     type: string
     description: "Malaysia Transit Middleware API URL"
     default: "https://malaysiatransit.techmavie.digital"
+  googleMapsApiKey:
+    type: string
+    description: "Google Maps API Key for geocoding (optional, falls back to Nominatim if not provided)"
+    default: ""
