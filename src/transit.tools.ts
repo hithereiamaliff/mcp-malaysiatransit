@@ -58,7 +58,7 @@ export function registerTransitTools(server: McpServer): void {
     'get_area_info',
     'Get detailed information about a specific transit service area',
     {
-      areaId: z.string().describe('Service area ID (e.g., "penang", "klang-valley", "kuantan")'),
+      areaId: z.coerce.string().describe('Service area ID (e.g., "penang", "klang-valley", "kuantan")'),
     },
     async ({ areaId }) => {
       try {
@@ -97,8 +97,8 @@ export function registerTransitTools(server: McpServer): void {
     'search_stops',
     'Search for bus or train stops by name in a specific area',
     {
-      area: z.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
-      query: z.string().describe('Search query (e.g., "Komtar", "KLCC")'),
+      area: z.coerce.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
+      query: z.coerce.string().describe('Search query (e.g., "Komtar", "KLCC")'),
     },
     async ({ area, query }) => {
       try {
@@ -135,8 +135,8 @@ export function registerTransitTools(server: McpServer): void {
     'get_stop_details',
     'Get detailed information about a specific bus or train stop',
     {
-      area: z.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
-      stopId: z.string().describe('Stop ID from search results'),
+      area: z.coerce.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
+      stopId: z.coerce.string().describe('Stop ID from search results'),
     },
     async ({ area, stopId }) => {
       try {
@@ -173,8 +173,8 @@ export function registerTransitTools(server: McpServer): void {
     'get_stop_arrivals',
     'Get real-time arrival predictions for buses/trains at a specific stop',
     {
-      area: z.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
-      stopId: z.string().describe('Stop ID from search results'),
+      area: z.coerce.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
+      stopId: z.coerce.string().describe('Stop ID from search results'),
     },
     async ({ area, stopId }) => {
       try {
@@ -211,10 +211,10 @@ export function registerTransitTools(server: McpServer): void {
     'find_nearby_stops',
     'Find bus or train stops near a specific location',
     {
-      area: z.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
-      lat: z.number().describe('Latitude coordinate'),
-      lon: z.number().describe('Longitude coordinate'),
-      radius: z.number().optional().default(500).describe('Search radius in meters (default: 500)'),
+      area: z.coerce.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
+      lat: z.coerce.number().describe('Latitude coordinate'),
+      lon: z.coerce.number().describe('Longitude coordinate'),
+      radius: z.coerce.number().optional().default(500).describe('Search radius in meters (default: 500)'),
     },
     async ({ area, lat, lon, radius }) => {
       try {
@@ -255,7 +255,7 @@ export function registerTransitTools(server: McpServer): void {
     'list_routes',
     'List all available bus or train routes in a specific area',
     {
-      area: z.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
+      area: z.coerce.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
     },
     async ({ area }) => {
       try {
@@ -292,8 +292,8 @@ export function registerTransitTools(server: McpServer): void {
     'get_route_details',
     'Get detailed information about a specific route including stops and geometry',
     {
-      area: z.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
-      routeId: z.string().describe('Route ID from list_routes'),
+      area: z.coerce.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
+      routeId: z.coerce.string().describe('Route ID from list_routes'),
     },
     async ({ area, routeId }) => {
       try {
@@ -330,8 +330,8 @@ export function registerTransitTools(server: McpServer): void {
     'get_route_geometry',
     'Get the geographic path and stops for a specific route (for map visualization)',
     {
-      area: z.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
-      routeId: z.string().describe('Route ID from list_routes'),
+      area: z.coerce.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
+      routeId: z.coerce.string().describe('Route ID from list_routes'),
     },
     async ({ area, routeId }) => {
       try {
@@ -372,7 +372,7 @@ export function registerTransitTools(server: McpServer): void {
     'get_live_vehicles',
     'Get real-time positions of all buses and trains in a specific area',
     {
-      area: z.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
+      area: z.coerce.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
       type: z.enum(['bus', 'rail']).optional().describe('Filter by transit type (optional)'),
     },
     async ({ area, type }) => {
@@ -415,7 +415,7 @@ export function registerTransitTools(server: McpServer): void {
     'get_provider_status',
     'Check the operational status of transit providers in a specific area',
     {
-      area: z.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
+      area: z.coerce.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
     },
     async ({ area }) => {
       try {
