@@ -236,25 +236,12 @@ Get real-time arrival predictions at a stop.
 - `area` (string): Service area ID
 - `stopId` (string): Stop ID from search results
 
-**Returns:** Includes a comprehensive disclaimer about prediction methodology, followed by arrival data with:
-- Calculation method (shape-based or straight-line)
-- Confidence level (high, medium, or low)
-- ETA in minutes
-- Vehicle information
-
-**Prediction Methodology:**
-- **Shape-Based Distance** (Preferred): Uses actual route geometry, accurate within ±2-4 minutes
-- **Straight-Line Distance** (Fallback): Conservative estimates with 1.4x multiplier
-- Includes GPS speed validation, time-of-day adjustments, and stop dwell time
-- Conservative bias: Better to arrive early than miss the bus
-
 **Example:**
 ```typescript
 const arrivals = await tools.get_stop_arrivals({
   area: "penang",
   stopId: "stop_123"
 });
-// Returns disclaimer + arrival data with confidence levels
 ```
 
 #### `find_nearby_stops`
@@ -508,14 +495,14 @@ The `detect_location_area` tool automatically maps common locations to service a
 |-----------|---------|
 | Penang Island, Seberang Perai | `penang` |
 | Kuala Lumpur, Selangor, Putrajaya | `klang-valley` |
-| Kuantan (Pahang) | `kuantan` |
-| Kangar (Perlis) | `kangar` |
-| Alor Setar (Kedah) | `alor-setar` |
-| Kota Bharu (Kelantan) | `kota-bharu` |
-| Kuala Terengganu (Terengganu) | `kuala-terengganu` |
-| Bandaraya Melaka (Melaka) | `melaka` |
-| Johor Bahru (Johor) | `johor` |
-| Kuching (Sarawak) | `kuching` |
+| Kuantan, Pahang | `kuantan` |
+| Kangar, Perlis | `kangar` |
+| Alor Setar, Kedah | `alor-setar` |
+| Kota Bharu, Kelantan | `kota-bharu` |
+| Kuala Terengganu, Terengganu | `kuala-terengganu` |
+| Bandaraya Melaka, Melaka | `melaka` |
+| Johor Bahru, Johor | `johor` |
+| Kuching, Sarawak | `kuching` |
 
 ## Deployment
 
