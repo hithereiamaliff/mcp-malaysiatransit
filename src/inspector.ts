@@ -6,12 +6,9 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import createStatelessServer from './index.js';
 
-// Create the MCP server
+// Create the MCP server (config via environment variables)
 const server = createStatelessServer({
-  config: {
-    middlewareUrl: process.env.MIDDLEWARE_URL || 'http://localhost:3000',
-    googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || ''
-  }
+  config: {}
 });
 
 // Create stdio transport

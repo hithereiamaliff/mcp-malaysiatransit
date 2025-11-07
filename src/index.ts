@@ -33,19 +33,8 @@ import { z } from 'zod';
 // Import transit tools
 import { registerTransitTools } from './transit.tools.js';
 
-// Define the config schema
-export const configSchema = z.object({
-  // Middleware API URL
-  middlewareUrl: z.string()
-    .default('https://malaysiatransit.techmavie.digital')
-    .describe('URL of the Malaysia Transit Middleware API. Default: https://malaysiatransit.techmavie.digital'),
-  
-  // Google Maps API Key (optional)
-  googleMapsApiKey: z.string()
-    .optional()
-    .default('')
-    .describe('Google Maps API Key for geocoding (optional, falls back to Nominatim if not provided)'),
-});
+// Define the config schema (empty - all config via environment variables)
+export const configSchema = z.object({});
 
 /**
  * Creates a stateless MCP server for Malaysia Transit API
@@ -60,18 +49,14 @@ export default function createStatelessServer({
     version: '1.0.0',
   });
 
-  // Extract config values
-  const { middlewareUrl, googleMapsApiKey } = _config;
+  // All configuration via environment variables
+  const middlewareUrl = process.env.MIDDLEWARE_URL || 'https://malaysiatransit.techmavie.digital';
+  process.env.MIDDLEWARE_URL = middlewareUrl;
+  console.log(`Using middleware URL: ${middlewareUrl}`);
   
-  // Set middleware URL: prioritize environment variable, then config, then default
-  const finalMiddlewareUrl = process.env.MIDDLEWARE_URL || middlewareUrl;
-  process.env.MIDDLEWARE_URL = finalMiddlewareUrl;
-  console.log(`Using middleware URL: ${finalMiddlewareUrl}`);
-  
-  // Set Google Maps API key: prioritize environment variable, then config
-  const finalApiKey = process.env.GOOGLE_MAPS_API_KEY || googleMapsApiKey;
-  if (finalApiKey) {
-    process.env.GOOGLE_MAPS_API_KEY = finalApiKey;
+  // Set Google Maps API key from environment
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (apiKey) {
     console.log(`Google Maps API key configured for geocoding`);
   } else {
     console.log(`No Google Maps API key provided, will use Nominatim for geocoding`);
