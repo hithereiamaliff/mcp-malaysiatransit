@@ -801,9 +801,9 @@ ARRIVAL DATA:
 
   server.tool(
     'get_fare_routes',
-    'Get all routes available for fare calculation in a specific area. Currently supports BAS.MY areas (Ipoh, Seremban, Kangar, etc.) and Rapid Penang.',
+    'Get all routes available for fare calculation in a specific area. MUST call this FIRST before calculate_fare to get valid route_id values. Supports: ipoh, seremban, kangar, alor-setar, kota-bharu, kuala-terengganu, melaka, johor, kuching, penang.',
     {
-      area: z.coerce.string().describe('Service area ID (e.g., "ipoh", "seremban", "penang", "kangar")'),
+      area: z.coerce.string().describe('Service area ID - must be: ipoh, seremban, kangar, alor-setar, kota-bharu, kuala-terengganu, melaka, johor, kuching, or penang'),
     },
     async ({ area }) => {
       try {
@@ -836,10 +836,10 @@ ARRIVAL DATA:
 
   server.tool(
     'get_route_stops_for_fare',
-    'Get all stops on a route with their distances for fare calculation. Use this to find stop IDs for calculate_fare.',
+    'Get all stops on a route with their distances for fare calculation. MUST call this SECOND (after get_fare_routes) to get valid stop_id values for calculate_fare. Returns stop IDs and names.',
     {
-      area: z.coerce.string().describe('Service area ID (e.g., "ipoh", "seremban", "penang")'),
-      routeId: z.coerce.string().describe('Route ID from get_fare_routes'),
+      area: z.coerce.string().describe('Service area ID - same as used in get_fare_routes'),
+      routeId: z.coerce.string().describe('The route_id value from get_fare_routes response (e.g., "D62", "A32", "M15CWLMYMK")'),
     },
     async ({ area, routeId }) => {
       try {
@@ -872,12 +872,12 @@ ARRIVAL DATA:
 
   server.tool(
     'calculate_fare',
-    'Calculate the bus fare between two stops on a route. Returns adult, concession, and child fares in MYR.',
+    'Calculate the bus fare between two stops on a route. IMPORTANT: You MUST first call get_fare_routes to get route_id, then get_route_stops_for_fare to get valid stop_id values. Do NOT guess IDs.',
     {
-      area: z.coerce.string().describe('Service area ID (e.g., "ipoh", "seremban", "penang")'),
-      routeId: z.coerce.string().describe('Route ID from get_fare_routes'),
-      fromStop: z.coerce.string().describe('Origin stop ID from get_route_stops_for_fare'),
-      toStop: z.coerce.string().describe('Destination stop ID from get_route_stops_for_fare'),
+      area: z.coerce.string().describe('Service area ID - same as used in previous calls'),
+      routeId: z.coerce.string().describe('The exact route_id from get_fare_routes (NOT route_short_name)'),
+      fromStop: z.coerce.string().describe('The exact stop_id from get_route_stops_for_fare response'),
+      toStop: z.coerce.string().describe('The exact stop_id from get_route_stops_for_fare response'),
     },
     async ({ area, routeId, fromStop, toStop }) => {
       try {
