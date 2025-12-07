@@ -15,15 +15,21 @@ dotenv.config();
  * =====================================================================
  * 1. ALWAYS use 'list_service_areas' first to discover available transit areas
  * 
- * 2. Use 'search_stops' to find bus/train stops by name
+ * 2. Use 'detect_location_area' to auto-detect area from location names
  * 
- * 3. Use 'get_stop_arrivals' to get real-time arrival information
+ * 3. Use 'search_stops' to find bus/train stops by name
  * 
- * 4. Use 'get_live_vehicles' to see real-time bus/train positions
+ * 4. Use 'get_stop_arrivals' to get real-time arrival information
  * 
- * 5. Use 'list_routes' to discover available routes in an area
+ * 5. Use 'get_live_vehicles' to see real-time bus/train positions
  * 
- * 6. All tools require an 'area' parameter (e.g., 'penang', 'klang-valley')
+ * 6. Use 'list_routes' to discover available routes in an area
+ * 
+ * 7. NEW: Use 'get_route_departures' for schedule information
+ * 
+ * 8. NEW: Use 'calculate_fare' to calculate bus fares (BAS.MY & Penang)
+ * 
+ * 9. All tools require an 'area' parameter (e.g., 'penang', 'klang-valley', 'ipoh')
  * =====================================================================
  */
 

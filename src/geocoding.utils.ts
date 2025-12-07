@@ -35,6 +35,15 @@ const STATE_TO_AREA_MAP: Record<string, string> = {
   'pulau pinang': 'penang',
   'george town': 'penang',
   'georgetown': 'penang',
+  'butterworth': 'penang',
+  'bayan lepas': 'penang',
+  
+  // Perak (Ipoh)
+  'perak': 'ipoh',
+  'ipoh': 'ipoh',
+  'bercham': 'ipoh',
+  'tanjung rambutan': 'ipoh',
+  'medan kidd': 'ipoh',
   
   // Kelantan
   'kelantan': 'kota-bharu',
@@ -49,6 +58,12 @@ const STATE_TO_AREA_MAP: Record<string, string> = {
   'pahang': 'kuantan',
   'kuantan': 'kuantan',
   
+  // Negeri Sembilan (Seremban)
+  'negeri sembilan': 'seremban',
+  'seremban': 'seremban',
+  'nilai': 'seremban',
+  'port dickson': 'seremban',
+  
   // Selangor / KL / Putrajaya (Klang Valley)
   'selangor': 'klang-valley',
   'kuala lumpur': 'klang-valley',
@@ -59,6 +74,12 @@ const STATE_TO_AREA_MAP: Record<string, string> = {
   'klang': 'klang-valley',
   'subang jaya': 'klang-valley',
   'cyberjaya': 'klang-valley',
+  'ampang': 'klang-valley',
+  'cheras': 'klang-valley',
+  'kajang': 'klang-valley',
+  'bangi': 'klang-valley',
+  'rawang': 'klang-valley',
+  'gombak': 'klang-valley',
   
   // Melaka
   'melaka': 'melaka',
@@ -69,6 +90,7 @@ const STATE_TO_AREA_MAP: Record<string, string> = {
   'johor bahru': 'johor',
   'johor baharu': 'johor',
   'jb': 'johor',
+  'iskandar puteri': 'johor',
   
   // Sarawak
   'sarawak': 'kuching',
@@ -77,9 +99,15 @@ const STATE_TO_AREA_MAP: Record<string, string> = {
 
 // City/location to area direct mapping (for common queries)
 const LOCATION_TO_AREA_MAP: Record<string, string> = {
+  // Penang
   'komtar': 'penang',
   'bayan lepas': 'penang',
   'butterworth': 'penang',
+  'penang sentral': 'penang',
+  'gurney': 'penang',
+  'queensbay': 'penang',
+  
+  // Klang Valley
   'klcc': 'klang-valley',
   'klia': 'klang-valley',
   'klia2': 'klang-valley',
@@ -87,6 +115,35 @@ const LOCATION_TO_AREA_MAP: Record<string, string> = {
   'pavilion': 'klang-valley',
   'sunway': 'klang-valley',
   '1 utama': 'klang-valley',
+  'kl sentral': 'klang-valley',
+  'bukit bintang': 'klang-valley',
+  'bangsar': 'klang-valley',
+  'mont kiara': 'klang-valley',
+  'ioi city': 'klang-valley',
+  'tbs': 'klang-valley',
+  'terminal bersepadu selatan': 'klang-valley',
+  
+  // Ipoh
+  'medan kidd': 'ipoh',
+  'terminal amanjaya': 'ipoh',
+  'ipoh parade': 'ipoh',
+  
+  // Seremban
+  'terminal one seremban': 'seremban',
+  'seremban 2': 'seremban',
+  
+  // Melaka
+  'melaka sentral': 'melaka',
+  'jonker street': 'melaka',
+  'a famosa': 'melaka',
+  
+  // Johor
+  'jb sentral': 'johor',
+  'larkin': 'johor',
+  'legoland': 'johor',
+  
+  // Kuching
+  'kuching sentral': 'kuching',
 };
 
 export interface GeocodingResult {
@@ -314,9 +371,11 @@ export function getAreaStateMapping(): Record<string, string[]> {
     'alor-setar': ['Kedah'],
     'kangar': ['Perlis'],
     'penang': ['Penang', 'Pulau Pinang'],
+    'ipoh': ['Perak'],
     'kota-bharu': ['Kelantan'],
     'kuala-terengganu': ['Terengganu'],
     'kuantan': ['Pahang'],
+    'seremban': ['Negeri Sembilan'],
     'klang-valley': ['Selangor', 'Kuala Lumpur', 'Putrajaya'],
     'melaka': ['Melaka', 'Malacca'],
     'johor': ['Johor'],

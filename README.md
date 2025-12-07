@@ -23,15 +23,17 @@ MCP (Model Context Protocol) server for Malaysia's public transit system, provid
 
 ## Features
 
-- **10 Operational Service Areas** across Malaysia
+- **12 Operational Service Areas** across Malaysia
   - Klang Valley (Rapid Rail KL, Rapid Bus KL, MRT Feeder)
   - Penang (Rapid Penang)
   - Kuantan (Rapid Kuantan)
-  - Kangar, Alor Setar, Kota Bharu, Kuala Terengganu, Melaka, Johor, Kuching (BAS.MY)
+  - Ipoh, Seremban, Kangar, Alor Setar, Kota Bharu, Kuala Terengganu, Melaka, Johor, Kuching (BAS.MY)
 - **Real-time Vehicle Tracking** - Live positions of buses and trains
 - **Stop Search & Information** - Find stops by name or location
 - **Route Discovery** - Browse available routes with destinations
-- **Arrival Predictions** - Get real-time arrival times at stops
+- **Arrival Predictions** - Get real-time arrival times at stops (shape-based, 40-60% more accurate)
+- **🆕 Schedule Information** - Get departure times, route schedules, and operating status
+- **🆕 Fare Calculator** - Calculate bus fares for BAS.MY and Rapid Penang routes
 - **Multi-Modal Support** - Both bus and rail services
 - **Provider Status Monitoring** - Check operational status of transit providers
 - **Location Detection** - Automatically detect service areas using geocoding
@@ -308,6 +310,127 @@ Check provider operational status.
 **Parameters:**
 - `area` (string): Service area ID
 
+### Schedule Information (NEW)
+
+#### `get_route_departures`
+Get the next N departures for a specific route (both directions).
+
+**Parameters:**
+- `area` (string): Service area ID (e.g., "ipoh", "seremban", "penang")
+- `routeId` (string): Route ID from list_routes
+- `count` (number, optional): Number of departures to return (default: 5)
+
+**Example:**
+```typescript
+const departures = await tools.get_route_departures({
+  area: "ipoh",
+  routeId: "A32",
+  count: 5
+});
+```
+
+#### `get_next_departure`
+Get the single next departure for a route in a specific direction.
+
+**Parameters:**
+- `area` (string): Service area ID
+- `routeId` (string): Route ID from list_routes
+- `direction` (enum, optional): 'outbound', 'inbound', or 'loop'
+
+#### `get_stop_routes`
+Get all routes serving a specific stop with their next departures.
+
+**Parameters:**
+- `area` (string): Service area ID
+- `stopId` (string): Stop ID from search_stops
+- `count` (number, optional): Number of departures per route (default: 3)
+
+#### `get_route_schedule`
+Get the complete daily schedule for a route.
+
+**Parameters:**
+- `area` (string): Service area ID
+- `routeId` (string): Route ID from list_routes
+
+#### `get_route_origin`
+Get the origin stop name for a route in a specific direction.
+
+**Parameters:**
+- `area` (string): Service area ID
+- `routeId` (string): Route ID from list_routes
+- `direction` (enum, optional): 'outbound' or 'inbound'
+
+#### `get_route_status`
+Check if a route is currently operating based on its schedule.
+
+**Parameters:**
+- `area` (string): Service area ID
+- `routeId` (string): Route ID from list_routes
+
+### Fare Calculator (NEW)
+
+#### `get_fare_routes`
+Get all routes available for fare calculation in a specific area.
+
+**Parameters:**
+- `area` (string): Service area ID (e.g., "ipoh", "seremban", "penang", "kangar")
+
+**Supported Areas:** BAS.MY areas (Ipoh, Seremban, Kangar, Alor Setar, Kota Bharu, Kuala Terengganu, Melaka, Johor, Kuching) and Rapid Penang.
+
+#### `get_route_stops_for_fare`
+Get all stops on a route with their distances for fare calculation.
+
+**Parameters:**
+- `area` (string): Service area ID
+- `routeId` (string): Route ID from get_fare_routes
+
+#### `calculate_fare` ⭐
+Calculate the bus fare between two stops on a route.
+
+**Parameters:**
+- `area` (string): Service area ID
+- `routeId` (string): Route ID from get_fare_routes
+- `fromStop` (string): Origin stop ID
+- `toStop` (string): Destination stop ID
+
+**Returns:** Adult, concession, and child fares in MYR with disclaimer.
+
+**Example:**
+```typescript
+const fare = await tools.calculate_fare({
+  area: "ipoh",
+  routeId: "A32",
+  fromStop: "stop_001",
+  toStop: "stop_015"
+});
+// Returns: { adult: "1.50", concession: "0.75", child: "FREE" }
+```
+
+#### `calculate_journey_fare`
+Calculate the total fare for a multi-leg journey with bus transfers.
+
+**Parameters:**
+- `area` (string): Base service area ID
+- `legs` (array): Array of journey legs (max 5), each with:
+  - `routeId` (string): Route ID for this leg
+  - `fromStop` (string): Origin stop ID
+  - `toStop` (string): Destination stop ID
+  - `areaId` (string, optional): Area ID for this leg (for inter-area journeys)
+
+**Note:** Each bus change requires a separate fare payment (BAS.MY does not have integrated transfers).
+
+### System Tools
+
+#### `get_system_health`
+Check the health status of the Malaysia Transit middleware service.
+
+**Parameters:** None
+
+#### `get_debug_info`
+Get comprehensive debug information about the middleware service.
+
+**Parameters:** None
+
 ### Testing
 
 #### `hello`
@@ -487,18 +610,20 @@ try {
 
 ## Supported Service Areas
 
-| Area ID | Name | Providers | Transit Types |
-|---------|------|-----------|---------------|
-| `klang-valley` | Klang Valley | Rapid Rail KL, Rapid Bus KL, MRT Feeder | Bus, Rail |
-| `penang` | Penang | Rapid Penang | Bus |
-| `kuantan` | Kuantan | Rapid Kuantan | Bus |
-| `kangar` | Kangar | BAS.MY Kangar | Bus |
-| `alor-setar` | Alor Setar | BAS.MY Alor Setar | Bus |
-| `kota-bharu` | Kota Bharu | BAS.MY Kota Bharu | Bus |
-| `kuala-terengganu` | Kuala Terengganu | BAS.MY Kuala Terengganu | Bus |
-| `melaka` | Melaka | BAS.MY Melaka | Bus |
-| `johor` | Johor Bahru | BAS.MY Johor Bahru | Bus |
-| `kuching` | Kuching | BAS.MY Kuching | Bus |
+| Area ID | Name | Providers | Transit Types | Fare Calculator |
+|---------|------|-----------|---------------|------------------|
+| `klang-valley` | Klang Valley | Rapid Rail KL, Rapid Bus KL, MRT Feeder | Bus, Rail | ❌ |
+| `penang` | Penang | Rapid Penang | Bus | ✅ |
+| `kuantan` | Kuantan | Rapid Kuantan | Bus | ❌ |
+| `ipoh` | Ipoh | BAS.MY Ipoh | Bus | ✅ |
+| `seremban` | Seremban | BAS.MY Seremban | Bus | ✅ |
+| `kangar` | Kangar | BAS.MY Kangar | Bus | ✅ |
+| `alor-setar` | Alor Setar | BAS.MY Alor Setar | Bus | ✅ |
+| `kota-bharu` | Kota Bharu | BAS.MY Kota Bharu | Bus | ✅ |
+| `kuala-terengganu` | Kuala Terengganu | BAS.MY Kuala Terengganu | Bus | ✅ |
+| `melaka` | Melaka | BAS.MY Melaka | Bus | ✅ |
+| `johor` | Johor Bahru | BAS.MY Johor Bahru | Bus | ✅ |
+| `kuching` | Kuching | BAS.MY Kuching | Bus | ✅ |
 
 ### Location to Area Mapping
 
@@ -506,7 +631,9 @@ The `detect_location_area` tool automatically maps common locations to service a
 
 | User Says | Area ID |
 |-----------|---------|
-| George Town, Seberang Jaya, Bayan Lepas, Bukit Mertajam | `penang` |
+| Ipoh, Bercham, Tanjung Rambutan, Medan Kidd | `ipoh` |
+| Seremban, Nilai, Port Dickson | `seremban` |
+| George Town, Butterworth, Bayan Lepas, Penang Sentral | `penang` |
 | KLCC, Shah Alam, Putrajaya | `klang-valley` |
 | Kuantan, Pekan, Bandar Indera Mahkota | `kuantan` |
 | Kangar, Arau, Kuala Perlis, Padang Besar | `kangar` |
