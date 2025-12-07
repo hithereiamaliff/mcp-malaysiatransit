@@ -555,10 +555,10 @@ ARRIVAL DATA:
 
   server.tool(
     'get_route_departures',
-    'Get the next N departures for a specific route (both directions). Useful for showing upcoming bus/train times.',
+    'Get the next N departures for a specific route (both directions). Useful for showing upcoming bus/train times. IMPORTANT: Use route_short_name (e.g., "K10", "A32", "R10") NOT the numeric route_id. Only works for BAS.MY areas: ipoh, seremban, kangar, alor-setar, kota-bharu, kuala-terengganu, melaka, johor, kuching.',
     {
-      area: z.coerce.string().describe('Service area ID (e.g., "ipoh", "seremban", "penang")'),
-      routeId: z.coerce.string().describe('Route ID from list_routes'),
+      area: z.coerce.string().describe('Service area ID - must be a BAS.MY area (e.g., "ipoh", "seremban", "alor-setar", "kangar")'),
+      routeId: z.coerce.string().describe('Route SHORT NAME (e.g., "K10", "A32", "R10", "J100") - NOT the numeric route_id. Get this from list_routes route_short_name field.'),
       count: z.coerce.number().optional().default(5).describe('Number of departures to return (default: 5)'),
     },
     async ({ area, routeId, count }) => {
@@ -594,10 +594,10 @@ ARRIVAL DATA:
 
   server.tool(
     'get_next_departure',
-    'Get the single next departure for a route in a specific direction. Quick way to find when the next bus/train leaves.',
+    'Get the single next departure for a route in a specific direction. Quick way to find when the next bus/train leaves. IMPORTANT: Use route_short_name (e.g., "K10", "A32") NOT numeric route_id. Only works for BAS.MY areas.',
     {
-      area: z.coerce.string().describe('Service area ID (e.g., "ipoh", "seremban", "penang")'),
-      routeId: z.coerce.string().describe('Route ID from list_routes'),
+      area: z.coerce.string().describe('Service area ID - must be a BAS.MY area (e.g., "ipoh", "seremban", "alor-setar")'),
+      routeId: z.coerce.string().describe('Route SHORT NAME (e.g., "K10", "A32", "R10") - NOT numeric route_id'),
       direction: z.enum(['outbound', 'inbound', 'loop']).optional().describe('Direction of travel (optional)'),
     },
     async ({ area, routeId, direction }) => {
@@ -638,9 +638,9 @@ ARRIVAL DATA:
 
   server.tool(
     'get_stop_routes',
-    'Get all routes serving a specific stop with their next departures. Shows which buses/trains stop here and when.',
+    'Get all routes serving a specific stop with their next departures. Shows which buses/trains stop here and when. Only works for BAS.MY areas with schedule data.',
     {
-      area: z.coerce.string().describe('Service area ID (e.g., "ipoh", "seremban", "penang")'),
+      area: z.coerce.string().describe('Service area ID - must be a BAS.MY area (e.g., "ipoh", "seremban", "alor-setar")'),
       stopId: z.coerce.string().describe('Stop ID from search_stops'),
       count: z.coerce.number().optional().default(3).describe('Number of departures per route (default: 3)'),
     },
@@ -677,10 +677,10 @@ ARRIVAL DATA:
 
   server.tool(
     'get_route_schedule',
-    'Get the complete daily schedule for a route. Shows all departure times throughout the day.',
+    'Get the complete daily schedule for a route. Shows all departure times throughout the day. IMPORTANT: Use route_short_name (e.g., "K10", "A32") NOT numeric route_id. Only works for BAS.MY areas.',
     {
-      area: z.coerce.string().describe('Service area ID (e.g., "ipoh", "seremban", "penang")'),
-      routeId: z.coerce.string().describe('Route ID from list_routes'),
+      area: z.coerce.string().describe('Service area ID - must be a BAS.MY area (e.g., "ipoh", "seremban", "alor-setar")'),
+      routeId: z.coerce.string().describe('Route SHORT NAME (e.g., "K10", "A32", "R10") - NOT numeric route_id'),
     },
     async ({ area, routeId }) => {
       try {
@@ -715,10 +715,10 @@ ARRIVAL DATA:
 
   server.tool(
     'get_route_origin',
-    'Get the origin stop name for a route in a specific direction. Useful for showing where the bus/train starts.',
+    'Get the origin stop name for a route in a specific direction. Useful for showing where the bus/train starts. IMPORTANT: Use route_short_name (e.g., "K10", "A32") NOT numeric route_id.',
     {
-      area: z.coerce.string().describe('Service area ID (e.g., "ipoh", "seremban", "penang")'),
-      routeId: z.coerce.string().describe('Route ID from list_routes'),
+      area: z.coerce.string().describe('Service area ID - must be a BAS.MY area (e.g., "ipoh", "seremban", "alor-setar")'),
+      routeId: z.coerce.string().describe('Route SHORT NAME (e.g., "K10", "A32", "R10") - NOT numeric route_id'),
       direction: z.enum(['outbound', 'inbound']).optional().describe('Direction of travel (optional)'),
     },
     async ({ area, routeId, direction }) => {
@@ -759,10 +759,10 @@ ARRIVAL DATA:
 
   server.tool(
     'get_route_status',
-    'Check if a route is currently operating based on its schedule. Shows if buses/trains are running now.',
+    'Check if a route is currently operating based on its schedule. Shows if buses/trains are running now. IMPORTANT: Use route_short_name (e.g., "K10", "A32") NOT numeric route_id. Only works for BAS.MY areas.',
     {
-      area: z.coerce.string().describe('Service area ID (e.g., "ipoh", "seremban", "penang")'),
-      routeId: z.coerce.string().describe('Route ID from list_routes'),
+      area: z.coerce.string().describe('Service area ID - must be a BAS.MY area (e.g., "ipoh", "seremban", "alor-setar")'),
+      routeId: z.coerce.string().describe('Route SHORT NAME (e.g., "K10", "A32", "R10") - NOT numeric route_id'),
     },
     async ({ area, routeId }) => {
       try {
