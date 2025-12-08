@@ -25,11 +25,16 @@ dotenv.config();
  * 
  * 6. Use 'list_routes' to discover available routes in an area
  * 
- * 7. NEW: Use 'get_route_departures' for schedule information
+ * 7. Use 'get_route_departures' for schedule information
  * 
- * 8. NEW: Use 'calculate_fare' to calculate bus fares (BAS.MY & Penang)
+ * 8. Use 'calculate_fare' to calculate bus fares (BAS.MY & Penang)
  * 
- * 9. All tools require an 'area' parameter (e.g., 'penang', 'klang-valley', 'ipoh')
+ * 9. NEW: Use 'get_api_analytics' to view API usage statistics
+ * 
+ * 10. All tools require an 'area' parameter (e.g., 'penang', 'klang-valley', 'ipoh')
+ * 
+ * NOTE: This MCP identifies itself as 'Malaysia-Transit-MCP' to the middleware
+ * for analytics tracking via the X-App-Name header.
  * =====================================================================
  */
 

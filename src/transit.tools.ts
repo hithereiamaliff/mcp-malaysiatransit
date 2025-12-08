@@ -5,12 +5,26 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import axios from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
 import { detectAreaFromLocation, getAreaStateMapping } from './geocoding.utils.js';
+
+// MCP Client Identification Header
+// This identifies requests from Malaysia Transit MCP to the middleware analytics
+const MCP_CLIENT_HEADERS = {
+  'X-App-Name': 'Malaysia-Transit-MCP',
+};
 
 // Get middleware URL from environment
 const getMiddlewareUrl = (): string => {
   return process.env.MIDDLEWARE_URL || 'http://localhost:3000';
+};
+
+// Create axios instance with MCP client identification
+const createApiConfig = (params?: Record<string, any>): AxiosRequestConfig => {
+  return {
+    headers: MCP_CLIENT_HEADERS,
+    params,
+  };
 };
 
 /**
@@ -28,7 +42,7 @@ export function registerTransitTools(server: McpServer): void {
     {},
     async () => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/areas`);
+        const response = await axios.get(`${getMiddlewareUrl()}/api/areas`, createApiConfig());
         
         return {
           content: [
@@ -122,7 +136,7 @@ export function registerTransitTools(server: McpServer): void {
     },
     async ({ areaId }) => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/areas/${areaId}`);
+        const response = await axios.get(`${getMiddlewareUrl()}/api/areas/${areaId}`, createApiConfig());
         
         return {
           content: [
@@ -162,9 +176,7 @@ export function registerTransitTools(server: McpServer): void {
     },
     async ({ area, query }) => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/stops/search`, {
-          params: { area, q: query },
-        });
+        const response = await axios.get(`${getMiddlewareUrl()}/api/stops/search`, createApiConfig({ area, q: query }));
         
         return {
           content: [
@@ -200,9 +212,7 @@ export function registerTransitTools(server: McpServer): void {
     },
     async ({ area, stopId }) => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/stops/${stopId}`, {
-          params: { area },
-        });
+        const response = await axios.get(`${getMiddlewareUrl()}/api/stops/${stopId}`, createApiConfig({ area }));
         
         return {
           content: [
@@ -238,9 +248,7 @@ export function registerTransitTools(server: McpServer): void {
     },
     async ({ area, stopId }) => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/stops/${stopId}/arrivals`, {
-          params: { area },
-        });
+        const response = await axios.get(`${getMiddlewareUrl()}/api/stops/${stopId}/arrivals`, createApiConfig({ area }));
         
         // Prepare disclaimer message
         const disclaimer = `
@@ -321,9 +329,7 @@ ARRIVAL DATA:
     },
     async ({ area, lat, lon, radius }) => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/stops/nearby`, {
-          params: { area, lat, lon, radius },
-        });
+        const response = await axios.get(`${getMiddlewareUrl()}/api/stops/nearby`, createApiConfig({ area, lat, lon, radius }));
         
         return {
           content: [
@@ -362,9 +368,7 @@ ARRIVAL DATA:
     },
     async ({ area }) => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/routes`, {
-          params: { area },
-        });
+        const response = await axios.get(`${getMiddlewareUrl()}/api/routes`, createApiConfig({ area }));
         
         return {
           content: [
@@ -400,9 +404,7 @@ ARRIVAL DATA:
     },
     async ({ area, routeId }) => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/routes/${routeId}`, {
-          params: { area },
-        });
+        const response = await axios.get(`${getMiddlewareUrl()}/api/routes/${routeId}`, createApiConfig({ area }));
         
         return {
           content: [
@@ -438,9 +440,7 @@ ARRIVAL DATA:
     },
     async ({ area, routeId }) => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/routes/${routeId}/geometry`, {
-          params: { area },
-        });
+        const response = await axios.get(`${getMiddlewareUrl()}/api/routes/${routeId}/geometry`, createApiConfig({ area }));
         
         return {
           content: [
@@ -485,9 +485,7 @@ ARRIVAL DATA:
           params.type = type;
         }
         
-        const response = await axios.get(`${getMiddlewareUrl()}/api/realtime`, {
-          params,
-        });
+        const response = await axios.get(`${getMiddlewareUrl()}/api/realtime`, createApiConfig(params));
         
         return {
           content: [
@@ -522,7 +520,7 @@ ARRIVAL DATA:
     },
     async ({ area }) => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/areas/${area}/providers/status`);
+        const response = await axios.get(`${getMiddlewareUrl()}/api/areas/${area}/providers/status`, createApiConfig());
         
         return {
           content: [
@@ -563,9 +561,7 @@ ARRIVAL DATA:
     },
     async ({ area, routeId, count }) => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/schedules/routes/${routeId}/departures`, {
-          params: { area, count },
-        });
+        const response = await axios.get(`${getMiddlewareUrl()}/api/schedules/routes/${routeId}/departures`, createApiConfig({ area, count }));
         
         return {
           content: [
@@ -607,9 +603,7 @@ ARRIVAL DATA:
           params.direction = direction;
         }
         
-        const response = await axios.get(`${getMiddlewareUrl()}/api/schedules/routes/${routeId}/next`, {
-          params,
-        });
+        const response = await axios.get(`${getMiddlewareUrl()}/api/schedules/routes/${routeId}/next`, createApiConfig(params));
         
         return {
           content: [
@@ -646,9 +640,7 @@ ARRIVAL DATA:
     },
     async ({ area, stopId, count }) => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/schedules/stops/${stopId}/routes`, {
-          params: { area, count },
-        });
+        const response = await axios.get(`${getMiddlewareUrl()}/api/schedules/stops/${stopId}/routes`, createApiConfig({ area, count }));
         
         return {
           content: [
@@ -684,9 +676,7 @@ ARRIVAL DATA:
     },
     async ({ area, routeId }) => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/schedules/routes/${routeId}/full`, {
-          params: { area },
-        });
+        const response = await axios.get(`${getMiddlewareUrl()}/api/schedules/routes/${routeId}/full`, createApiConfig({ area }));
         
         return {
           content: [
@@ -728,9 +718,7 @@ ARRIVAL DATA:
           params.direction = direction;
         }
         
-        const response = await axios.get(`${getMiddlewareUrl()}/api/schedules/routes/${routeId}/origin`, {
-          params,
-        });
+        const response = await axios.get(`${getMiddlewareUrl()}/api/schedules/routes/${routeId}/origin`, createApiConfig(params));
         
         return {
           content: [
@@ -766,9 +754,7 @@ ARRIVAL DATA:
     },
     async ({ area, routeId }) => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/schedules/routes/${routeId}/status`, {
-          params: { area },
-        });
+        const response = await axios.get(`${getMiddlewareUrl()}/api/schedules/routes/${routeId}/status`, createApiConfig({ area }));
         
         return {
           content: [
@@ -807,7 +793,7 @@ ARRIVAL DATA:
     },
     async ({ area }) => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/fare/${area}/routes`);
+        const response = await axios.get(`${getMiddlewareUrl()}/api/fare/${area}/routes`, createApiConfig());
         
         return {
           content: [
@@ -843,7 +829,7 @@ ARRIVAL DATA:
     },
     async ({ area, routeId }) => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/fare/${area}/route/${routeId}/stops`);
+        const response = await axios.get(`${getMiddlewareUrl()}/api/fare/${area}/route/${routeId}/stops`, createApiConfig());
         
         return {
           content: [
@@ -881,9 +867,7 @@ ARRIVAL DATA:
     },
     async ({ area, routeId, fromStop, toStop }) => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/fare/${area}/calculate`, {
-          params: { routeId, fromStop, toStop },
-        });
+        const response = await axios.get(`${getMiddlewareUrl()}/api/fare/${area}/calculate`, createApiConfig({ routeId, fromStop, toStop }));
         
         // Add disclaimer about fare estimates
         const disclaimer = `
@@ -937,9 +921,7 @@ FARE DETAILS:
     },
     async ({ area, legs }) => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/fare/${area}/calculate-journey`, {
-          params: { legs: JSON.stringify(legs) },
-        });
+        const response = await axios.get(`${getMiddlewareUrl()}/api/fare/${area}/calculate-journey`, createApiConfig({ legs: JSON.stringify(legs) }));
         
         // Add disclaimer about fare estimates
         const disclaimer = `
@@ -989,7 +971,7 @@ JOURNEY FARE DETAILS:
     {},
     async () => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/health`);
+        const response = await axios.get(`${getMiddlewareUrl()}/health`, createApiConfig());
         
         return {
           content: [
@@ -1023,7 +1005,7 @@ JOURNEY FARE DETAILS:
     {},
     async () => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/debug`);
+        const response = await axios.get(`${getMiddlewareUrl()}/api/debug`, createApiConfig());
         
         return {
           content: [
@@ -1040,6 +1022,98 @@ JOURNEY FARE DETAILS:
               type: 'text',
               text: JSON.stringify({
                 error: 'Failed to fetch debug info',
+                message: error.message,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // ============================================================================
+  // ANALYTICS TOOLS (NEW)
+  // ============================================================================
+
+  server.tool(
+    'get_api_analytics',
+    'Get API usage analytics and statistics from the middleware. Shows total requests, requests per hour, error rates, and usage by service area. Useful for monitoring API health and usage patterns.',
+    {
+      type: z.enum(['summary', 'endpoints', 'areas', 'cumulative', 'clients']).optional().default('summary').describe('Type of analytics: summary (overview), endpoints (per-endpoint stats), areas (per-area stats), cumulative (all-time totals), clients (app/website usage)'),
+    },
+    async ({ type }) => {
+      try {
+        let endpoint = '/api/analytics/summary';
+        switch (type) {
+          case 'endpoints':
+            endpoint = '/api/analytics/endpoints';
+            break;
+          case 'areas':
+            endpoint = '/api/analytics/areas';
+            break;
+          case 'cumulative':
+            endpoint = '/api/analytics/cumulative';
+            break;
+          case 'clients':
+            endpoint = '/api/analytics/clients';
+            break;
+          default:
+            endpoint = '/api/analytics/summary';
+        }
+        
+        const response = await axios.get(`${getMiddlewareUrl()}${endpoint}`, createApiConfig());
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response.data, null, 2),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: 'Failed to fetch API analytics',
+                message: error.message,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'get_area_analytics',
+    'Get detailed API usage analytics for a specific service area. Shows which endpoints are most used for that area.',
+    {
+      area: z.coerce.string().describe('Service area ID (e.g., "penang", "klang-valley", "ipoh")'),
+    },
+    async ({ area }) => {
+      try {
+        const response = await axios.get(`${getMiddlewareUrl()}/api/analytics/areas/${area}`, createApiConfig());
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response.data, null, 2),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: `Failed to fetch analytics for area ${area}`,
                 message: error.message,
               }, null, 2),
             },

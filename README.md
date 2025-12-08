@@ -32,11 +32,13 @@ MCP (Model Context Protocol) server for Malaysia's public transit system, provid
 - **Stop Search & Information** - Find stops by name or location
 - **Route Discovery** - Browse available routes with destinations
 - **Arrival Predictions** - Get real-time arrival times at stops (shape-based, 40-60% more accurate)
-- **🆕 Schedule Information** - Get departure times, route schedules, and operating status
-- **🆕 Fare Calculator** - Calculate bus fares for BAS.MY and Rapid Penang routes
+- **Schedule Information** - Get departure times, route schedules, and operating status
+- **Fare Calculator** - Calculate bus fares for BAS.MY and Rapid Penang routes
 - **Multi-Modal Support** - Both bus and rail services
 - **Provider Status Monitoring** - Check operational status of transit providers
 - **Location Detection** - Automatically detect service areas using geocoding
+- **🆕 API Analytics** - View API usage statistics, endpoint metrics, and client tracking
+- **🆕 Client Identification** - MCP identifies itself to middleware for analytics tracking
 
 ## Architecture
 
@@ -45,12 +47,14 @@ This MCP server acts as a bridge between AI assistants and the Malaysia Transit 
 ```
 AI Assistant (Claude, GPT, etc.)
     ↓
-Malaysia Transit MCP Server
+Malaysia Transit MCP Server (identifies as "Malaysia-Transit-MCP")
     ↓
-Malaysia Transit Middleware API
+Malaysia Transit Middleware API (tracks usage via X-App-Name header)
     ↓
 Malaysia Open Data Portal (GTFS Static & Realtime)
 ```
+
+**Client Identification:** This MCP automatically sends an `X-App-Name: Malaysia-Transit-MCP` header with every API request, allowing the middleware to track usage from this MCP separately in its analytics dashboard.
 
 ## Quick Start
 
@@ -430,6 +434,39 @@ Check the health status of the Malaysia Transit middleware service.
 Get comprehensive debug information about the middleware service.
 
 **Parameters:** None
+
+### Analytics Tools (NEW)
+
+#### `get_api_analytics`
+Get API usage analytics and statistics from the middleware.
+
+**Parameters:**
+- `type` (enum, optional): Type of analytics to retrieve:
+  - `summary` (default): Overview with requests/hour, error rate, uptime
+  - `endpoints`: Per-endpoint statistics
+  - `areas`: Per-service-area statistics
+  - `cumulative`: All-time totals
+  - `clients`: App/website usage breakdown
+
+**Example:**
+```typescript
+// Get summary analytics
+const summary = await tools.get_api_analytics({ type: "summary" });
+
+// Get client usage (see which apps use the API)
+const clients = await tools.get_api_analytics({ type: "clients" });
+```
+
+#### `get_area_analytics`
+Get detailed API usage analytics for a specific service area.
+
+**Parameters:**
+- `area` (string): Service area ID (e.g., "penang", "klang-valley")
+
+**Example:**
+```typescript
+const penangStats = await tools.get_area_analytics({ area: "penang" });
+```
 
 ### Testing
 
