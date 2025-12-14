@@ -1,8 +1,8 @@
 # Malaysia Transit MCP
 
-[![smithery badge](https://smithery.ai/badge/@hithereiamaliff/mcp-malaysiatransit)](https://smithery.ai/server/@hithereiamaliff/mcp-malaysiatransit)
-
 MCP (Model Context Protocol) server for Malaysia's public transit system, providing real-time bus and train information across 10+ cities in Malaysia.
+
+**MCP Endpoint:** `https://mcp.techmavie.digital/malaysiatransit/mcp`
 
 **Data Source:** [Malaysia Transit Middleware](https://github.com/hithereiamaliff/malaysiatransit-middleware)
 
@@ -67,79 +67,42 @@ Malaysia Open Data Portal (GTFS Static & Realtime)
 
 ## Quick Start
 
-### Local Testing with Smithery Playground
+### Connect to the MCP Server
 
-#### Step 1: Start Your Middleware
+Add this configuration to your MCP client (Claude Desktop, Cursor, Windsurf, etc.):
 
-First, ensure your Malaysia Transit Middleware is running:
+```json
+{
+  "mcpServers": {
+    "malaysia-transit": {
+      "transport": "streamable-http",
+      "url": "https://mcp.techmavie.digital/malaysiatransit/mcp"
+    }
+  }
+}
+```
+
+### Test with MCP Inspector
 
 ```bash
-cd path/to/malaysiatransit-middleware
-npm run dev
+npx @modelcontextprotocol/inspector
+# Select "Streamable HTTP"
+# Enter URL: https://mcp.techmavie.digital/malaysiatransit/mcp
 ```
 
-The middleware should be running on `http://localhost:3000`.
-
-#### Step 2: Configure Environment
-
-Create a `.env` file in the MCP project root:
+### Test with curl
 
 ```bash
-cd malaysiatransit-mcp
-cp .env.sample .env
+# List all available tools
+curl -X POST https://mcp.techmavie.digital/malaysiatransit/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+
+# Call the hello tool
+curl -X POST https://mcp.techmavie.digital/malaysiatransit/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hello","arguments":{}}}'
 ```
-
-Edit `.env`:
-```env
-MIDDLEWARE_URL=http://localhost:3000
-GOOGLE_MAPS_API_KEY=your_api_key_here  # Optional, for location detection
-```
-
-#### Step 3: Start Smithery Dev Server
-
-```bash
-npm install
-npm run dev
-```
-
-This will:
-1. Build your MCP server
-2. Start the Smithery CLI in development mode
-3. Open the Smithery playground in your browser
-
-#### Step 4: Test in Smithery Playground
-
-In the Smithery playground interface:
-
-1. **Test the hello tool:**
-   ```
-   Call: hello
-   ```
-   Expected: Returns server info and middleware URL
-
-2. **List service areas:**
-   ```
-   Call: list_service_areas
-   ```
-   Expected: Returns all available transit areas
-
-3. **Search for stops:**
-   ```
-   Call: search_stops
-   Parameters:
-     area: "penang"
-     query: "Komtar"
-   ```
-   Expected: Returns matching stops
-
-4. **Get real-time arrivals:**
-   ```
-   Call: get_stop_arrivals
-   Parameters:
-     area: "penang"
-     stopId: "<stop_id_from_search>"
-   ```
-   Expected: Returns upcoming bus arrivals
 
 ## Installation
 
@@ -151,11 +114,10 @@ npm install
 
 ### Environment Variables
 
-The MCP server uses environment variables for configuration. When deployed to Smithery, set these in the deployment settings:
+The MCP server uses environment variables for configuration:
 
 - **`MIDDLEWARE_URL`** (required): Malaysia Transit Middleware API URL
-  - Local: `http://localhost:3000`
-  - Production: Your deployed middleware URL (e.g., `https://malaysiatransit.techmavie.digital`)
+  - Default: `https://malaysiatransit.techmavie.digital`
 
 - **`GOOGLE_MAPS_API_KEY`** (optional): Google Maps API key for location detection
   - If not provided, falls back to Nominatim (free but less accurate)
@@ -795,29 +757,24 @@ The `detect_location_area` tool automatically maps common locations to service a
 
 ## Deployment
 
-### Deploy to Smithery
+### Production Server
 
-This MCP is designed to be deployed to Smithery:
+The MCP server is deployed at:
+- **Endpoint:** `https://mcp.techmavie.digital/malaysiatransit/mcp`
+- **Health Check:** `https://mcp.techmavie.digital/malaysiatransit/health`
+- **Transport:** Streamable HTTP
 
-1. **Push to GitHub:**
-   ```bash
-   git push origin main
-   ```
+### Self-Hosting
 
-2. **Smithery will auto-deploy** from your GitHub repository
+To deploy your own instance, see the [deployment guide](./deploy/DEPLOYMENT.md).
 
-3. **Configure Environment Variables in Smithery:**
-   - Go to Settings → Environment
-   - Add `MIDDLEWARE_URL`: Your deployed middleware URL
-   - Add `GOOGLE_MAPS_API_KEY`: Your Google Maps API key (optional)
+```bash
+# Using Docker
+docker compose up -d --build
 
-### Environment Configuration
-
-Set these environment variables in Smithery deployment settings:
-
-```
-MIDDLEWARE_URL=https://malaysiatransit.techmavie.digital
-GOOGLE_MAPS_API_KEY=your_api_key_here
+# Or run directly
+npm run build
+npm run start:http
 ```
 
 ## Troubleshooting
@@ -897,7 +854,7 @@ MIT - See [LICENSE](./LICENSE) file for details.
 - [Malaysia Open Data Portal](https://data.gov.my/) for GTFS data
 - [Prasarana Malaysia](https://www.prasarana.com.my/) for Rapid KL services
 - [BAS.MY](https://bas.my/) for regional bus services
-- [Smithery](https://smithery.ai/) for the MCP framework
+- [Model Context Protocol](https://modelcontextprotocol.io/) for the MCP framework
 - [Google Maps Platform](https://developers.google.com/maps) for geocoding services
 - [OpenStreetMap Nominatim](https://nominatim.openstreetmap.org/) for fallback geocoding
 
