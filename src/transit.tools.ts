@@ -1019,6 +1019,329 @@ JOURNEY FARE DETAILS:
     }
   );
 
+  server.tool(
+    'get_route_directions_for_fare',
+    'Get available directions for a route when calculating fares. Use this to determine which direction (outbound/inbound) to use for fare calculation.',
+    {
+      area: z.coerce.string().describe('Service area ID (e.g., "penang", "ipoh")'),
+      routeId: z.coerce.string().describe('Route ID from get_fare_routes'),
+    },
+    async ({ area, routeId }) => {
+      try {
+        const response = await axios.get(`${getMiddlewareUrl()}/api/fare/${area}/route/${routeId}/directions`, createApiConfig());
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response.data, null, 2),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: `Failed to fetch directions for route ${routeId}`,
+                message: error.message,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // ============================================================================
+  // KTM KOMUTER UTARA TOOLS (NEW)
+  // ============================================================================
+
+  server.tool(
+    'get_ktm_komuter_stations',
+    'Get all 23 KTM Komuter Utara stations (Padang Besar - Butterworth - Ipoh line). Returns station codes, names, and coordinates.',
+    {},
+    async () => {
+      try {
+        const response = await axios.get(`${getMiddlewareUrl()}/api/ktm/komuter/stations`, createApiConfig());
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response.data, null, 2),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: 'Failed to fetch KTM Komuter stations',
+                message: error.message,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'calculate_ktm_komuter_fare',
+    'Calculate KTM Komuter Utara fare between two stations. Use station codes (e.g., "BU" for Butterworth, "IP" for Ipoh, "PB" for Padang Besar).',
+    {
+      from: z.coerce.string().describe('Origin station code (e.g., "BU", "IP", "PB")'),
+      to: z.coerce.string().describe('Destination station code (e.g., "BU", "IP", "PB")'),
+    },
+    async ({ from, to }) => {
+      try {
+        const response = await axios.get(`${getMiddlewareUrl()}/api/ktm/komuter/fare`, createApiConfig({ from, to }));
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response.data, null, 2),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: 'Failed to calculate KTM Komuter fare',
+                message: error.message,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'get_ktm_komuter_fare_matrix',
+    'Get the full KTM Komuter Utara fare matrix showing fares between all station pairs.',
+    {},
+    async () => {
+      try {
+        const response = await axios.get(`${getMiddlewareUrl()}/api/ktm/komuter/fare-matrix`, createApiConfig());
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response.data, null, 2),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: 'Failed to fetch KTM Komuter fare matrix',
+                message: error.message,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'get_ktm_station_departures',
+    'Get departure times for a specific KTM station. Supports both KTM Komuter Utara and KTM Intercity schedules.',
+    {
+      stationName: z.coerce.string().describe('Station name (e.g., "Butterworth", "Ipoh", "Padang Besar", "Gemas")'),
+      type: z.enum(['ktm-komuter-utara', 'ktm-intercity']).describe('Schedule type: ktm-komuter-utara (Padang Besar-Ipoh) or ktm-intercity (SH/ERT routes)'),
+    },
+    async ({ stationName, type }) => {
+      try {
+        const response = await axios.get(`${getMiddlewareUrl()}/api/ktm/stations/${encodeURIComponent(stationName)}/departures`, createApiConfig({ type }));
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response.data, null, 2),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: `Failed to fetch departures for station ${stationName}`,
+                message: error.message,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'get_ktm_stations',
+    'Get all KTM stations for a specific schedule type (Komuter Utara or Intercity).',
+    {
+      type: z.enum(['ktm-komuter-utara', 'ktm-intercity']).describe('Schedule type: ktm-komuter-utara or ktm-intercity'),
+    },
+    async ({ type }) => {
+      try {
+        const response = await axios.get(`${getMiddlewareUrl()}/api/ktm/stations`, createApiConfig({ type }));
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response.data, null, 2),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: 'Failed to fetch KTM stations',
+                message: error.message,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'get_ktm_schedules',
+    'Get full KTM schedule data for a specific schedule type. Returns complete timetable information.',
+    {
+      type: z.enum(['ktm-komuter-utara', 'ktm-intercity']).describe('Schedule type: ktm-komuter-utara or ktm-intercity'),
+    },
+    async ({ type }) => {
+      try {
+        const response = await axios.get(`${getMiddlewareUrl()}/api/ktm/schedules`, createApiConfig({ type }));
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response.data, null, 2),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: 'Failed to fetch KTM schedules',
+                message: error.message,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'find_nearby_ktm_stations',
+    'Find KTM stations near a specific location. Useful for finding the closest train station.',
+    {
+      lat: z.coerce.number().describe('Latitude coordinate'),
+      lon: z.coerce.number().describe('Longitude coordinate'),
+      radius: z.coerce.number().optional().default(10).describe('Search radius in kilometers (default: 10)'),
+      type: z.enum(['ktm-komuter-utara', 'ktm-intercity']).describe('Schedule type: ktm-komuter-utara or ktm-intercity'),
+    },
+    async ({ lat, lon, radius, type }) => {
+      try {
+        const response = await axios.get(`${getMiddlewareUrl()}/api/ktm/nearby`, createApiConfig({ lat, lon, radius, type }));
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response.data, null, 2),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: 'Failed to find nearby KTM stations',
+                message: error.message,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // ============================================================================
+  // PENANG FERRY TOOLS (NEW)
+  // ============================================================================
+
+  server.tool(
+    'get_penang_ferry_info',
+    'Get Penang Ferry fare information, schedule, terminals, and payment methods. The ferry operates between Butterworth and George Town.',
+    {},
+    async () => {
+      try {
+        const response = await axios.get(`${getMiddlewareUrl()}/api/ferry/penang/fare`, createApiConfig());
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response.data, null, 2),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: 'Failed to fetch Penang Ferry information',
+                message: error.message,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
   // ============================================================================
   // SYSTEM TOOLS
   // ============================================================================

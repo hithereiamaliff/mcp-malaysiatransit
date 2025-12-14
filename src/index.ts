@@ -25,13 +25,24 @@ dotenv.config();
  * 
  * 6. Use 'list_routes' to discover available routes in an area
  * 
- * 7. Use 'get_route_departures' for schedule information
+ * 7. Use 'get_route_departures' for schedule information (BAS.MY areas only)
  * 
  * 8. Use 'calculate_fare' to calculate bus fares (BAS.MY & Penang)
  * 
- * 9. NEW: Use 'get_api_analytics' to view API usage statistics
+ * 9. Use 'get_api_analytics' to view API usage statistics
  * 
- * 10. All tools require an 'area' parameter (e.g., 'penang', 'klang-valley', 'ipoh')
+ * 10. NEW KTM TOOLS:
+ *     - 'get_ktm_komuter_stations' - Get all 23 KTM Komuter Utara stations
+ *     - 'calculate_ktm_komuter_fare' - Calculate KTM Komuter fare between stations
+ *     - 'get_ktm_station_departures' - Get departures for a KTM station
+ *     - 'get_ktm_schedules' - Get full KTM schedule data
+ *     - 'find_nearby_ktm_stations' - Find KTM stations near a location
+ * 
+ * 11. NEW FERRY TOOL:
+ *     - 'get_penang_ferry_info' - Get Penang Ferry fare, schedule, and terminals
+ * 
+ * 12. All tools require an 'area' parameter (e.g., 'penang', 'klang-valley', 'ipoh')
+ *     Exception: KTM and Ferry tools don't require area parameter
  * 
  * NOTE: This MCP identifies itself as 'Malaysia-Transit-MCP' to the middleware
  * for analytics tracking via the X-App-Name header.

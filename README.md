@@ -23,20 +23,29 @@ MCP (Model Context Protocol) server for Malaysia's public transit system, provid
 
 ## Features
 
-- **12 Operational Service Areas** across Malaysia
+- **11 Operational Service Areas + 1 Under Maintenance + 1 Coming Soon** across Malaysia
   - Klang Valley (Rapid Rail KL, Rapid Bus KL, MRT Feeder)
-  - Penang (Rapid Penang)
-  - Kuantan (Rapid Kuantan)
-  - Ipoh, Seremban, Kangar, Alor Setar, Kota Bharu, Kuala Terengganu, Melaka, Johor, Kuching (BAS.MY)
+  - Penang (Rapid Penang, Penang Ferry, KTM Komuter Utara)
+  - Ipoh (BAS.MY Ipoh, KTM Komuter Utara)
+  - Seremban (BAS.MY Seremban, KTM Intercity)
+  - Kangar (BAS.MY Kangar, KTM Komuter Utara)
+  - Alor Setar (BAS.MY Alor Setar, KTM Komuter Utara)
+  - Kota Bharu (BAS.MY Kota Bharu, KTM Intercity)
+  - Kuala Terengganu, Melaka, Johor, Kuching (BAS.MY only)
+  - Kuantan (Under Maintenance)
+  - Kota Kinabalu (Coming Soon)
 - **Real-time Vehicle Tracking** - Live positions of buses and trains
 - **Stop Search & Information** - Find stops by name or location
 - **Route Discovery** - Browse available routes with destinations
 - **Arrival Predictions** - Get real-time arrival times at stops (shape-based, 40-60% more accurate)
 - **Schedule Information** - Get departure times, route schedules, and operating status
 - **Fare Calculator** - Calculate bus fares for BAS.MY and Rapid Penang routes
-- **Multi-Modal Support** - Both bus and rail services
+- **Multi-Modal Support** - Bus, rail, and ferry services
 - **Provider Status Monitoring** - Check operational status of transit providers
 - **Location Detection** - Automatically detect service areas using geocoding
+- **🆕 KTM Komuter Utara** - 23 stations from Padang Besar to Ipoh with fare calculation
+- **🆕 KTM Intercity** - SH and ERT routes (Tumpat - Gemas - JB Sentral)
+- **🆕 Penang Ferry** - Butterworth to George Town ferry information
 - **🆕 API Analytics** - View API usage statistics, endpoint metrics, and client tracking
 - **🆕 Client Identification** - MCP identifies itself to middleware for analytics tracking
 
@@ -423,6 +432,100 @@ Calculate the total fare for a multi-leg journey with bus transfers.
 
 **Note:** Each bus change requires a separate fare payment (BAS.MY does not have integrated transfers).
 
+#### `get_route_directions_for_fare`
+Get available directions for a route when calculating fares.
+
+**Parameters:**
+- `area` (string): Service area ID
+- `routeId` (string): Route ID from get_fare_routes
+
+### KTM Komuter Utara Tools (NEW)
+
+#### `get_ktm_komuter_stations`
+Get all 23 KTM Komuter Utara stations (Padang Besar - Butterworth - Ipoh line).
+
+**Parameters:** None
+
+**Returns:** Station codes, names, and coordinates.
+
+**Example:**
+```typescript
+const stations = await tools.get_ktm_komuter_stations();
+// Returns: [{ code: "PB", name: "Padang Besar", ... }, ...]
+```
+
+#### `calculate_ktm_komuter_fare` ⭐
+Calculate KTM Komuter Utara fare between two stations.
+
+**Parameters:**
+- `from` (string): Origin station code (e.g., "BU" for Butterworth)
+- `to` (string): Destination station code (e.g., "IP" for Ipoh)
+
+**Example:**
+```typescript
+const fare = await tools.calculate_ktm_komuter_fare({
+  from: "BU",
+  to: "IP"
+});
+// Returns: { adult: "12.00", child: "6.00", currency: "MYR" }
+```
+
+#### `get_ktm_komuter_fare_matrix`
+Get the full KTM Komuter Utara fare matrix showing fares between all station pairs.
+
+**Parameters:** None
+
+#### `get_ktm_station_departures` ⭐
+Get departure times for a specific KTM station.
+
+**Parameters:**
+- `stationName` (string): Station name (e.g., "Butterworth", "Ipoh")
+- `type` (enum): Schedule type - `ktm-komuter-utara` or `ktm-intercity`
+
+**Example:**
+```typescript
+const departures = await tools.get_ktm_station_departures({
+  stationName: "Butterworth",
+  type: "ktm-komuter-utara"
+});
+```
+
+#### `get_ktm_stations`
+Get all KTM stations for a specific schedule type.
+
+**Parameters:**
+- `type` (enum): `ktm-komuter-utara` or `ktm-intercity`
+
+#### `get_ktm_schedules`
+Get full KTM schedule data for a specific schedule type.
+
+**Parameters:**
+- `type` (enum): `ktm-komuter-utara` or `ktm-intercity`
+
+#### `find_nearby_ktm_stations`
+Find KTM stations near a specific location.
+
+**Parameters:**
+- `lat` (number): Latitude coordinate
+- `lon` (number): Longitude coordinate
+- `radius` (number, optional): Search radius in kilometers (default: 10)
+- `type` (enum): `ktm-komuter-utara` or `ktm-intercity`
+
+### Penang Ferry Tools (NEW)
+
+#### `get_penang_ferry_info` ⭐
+Get Penang Ferry fare information, schedule, terminals, and payment methods.
+
+**Parameters:** None
+
+**Returns:** Ferry fare, operating hours, terminal locations, and payment options.
+
+**Example:**
+```typescript
+const ferry = await tools.get_penang_ferry_info();
+// Returns: { fare: { adult: "1.40", ... }, schedule: { ... }, terminals: [...] }
+```
+
 ### System Tools
 
 #### `get_system_health`
@@ -650,17 +753,26 @@ try {
 | Area ID | Name | Providers | Transit Types | Fare Calculator |
 |---------|------|-----------|---------------|------------------|
 | `klang-valley` | Klang Valley | Rapid Rail KL, Rapid Bus KL, MRT Feeder | Bus, Rail | ❌ |
-| `penang` | Penang | Rapid Penang | Bus | ✅ |
-| `kuantan` | Kuantan | Rapid Kuantan | Bus | ❌ |
-| `ipoh` | Ipoh | BAS.MY Ipoh | Bus | ✅ |
-| `seremban` | Seremban | BAS.MY Seremban | Bus | ✅ |
-| `kangar` | Kangar | BAS.MY Kangar | Bus | ✅ |
-| `alor-setar` | Alor Setar | BAS.MY Alor Setar | Bus | ✅ |
-| `kota-bharu` | Kota Bharu | BAS.MY Kota Bharu | Bus | ✅ |
+| `penang` | Penang | Rapid Penang, Penang Ferry, KTM Komuter Utara | Bus, Ferry, Rail | ✅ |
+| `kuantan` | Kuantan | Under Maintenance | Bus | ❌ |
+| `ipoh` | Ipoh | BAS.MY Ipoh, KTM Komuter Utara | Bus, Rail | ✅ |
+| `seremban` | Seremban | BAS.MY Seremban, KTM Intercity | Bus, Rail | ✅ |
+| `kangar` | Kangar | BAS.MY Kangar, KTM Komuter Utara | Bus, Rail | ✅ |
+| `alor-setar` | Alor Setar | BAS.MY Alor Setar, KTM Komuter Utara | Bus, Rail | ✅ |
+| `kota-bharu` | Kota Bharu | BAS.MY Kota Bharu, KTM Intercity | Bus, Rail | ✅ |
 | `kuala-terengganu` | Kuala Terengganu | BAS.MY Kuala Terengganu | Bus | ✅ |
 | `melaka` | Melaka | BAS.MY Melaka | Bus | ✅ |
 | `johor` | Johor Bahru | BAS.MY Johor Bahru | Bus | ✅ |
 | `kuching` | Kuching | BAS.MY Kuching | Bus | ✅ |
+| `kota-kinabalu` | Kota Kinabalu | Coming Soon | - | ❌ |
+
+### KTM Services
+
+| Service | Route | Stations | Fare Calculator |
+|---------|-------|----------|------------------|
+| KTM Komuter Utara | Padang Besar ↔ Butterworth ↔ Ipoh | 23 stations | ✅ |
+| KTM Intercity (SH) | JB Sentral ↔ Gemas ↔ Tumpat | Multiple | ❌ (Coming Soon) |
+| KTM Intercity (ERT) | JB Sentral ↔ Gemas ↔ Tumpat | Multiple | ❌ (Coming Soon) |
 
 ### Location to Area Mapping
 
