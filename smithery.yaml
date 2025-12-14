@@ -1,3 +1,4 @@
-runtime: typescript
-# Configuration via environment variables only
-# Smithery will use src/index.ts as the entry point
+runtime: "typescript"
+env:
+  MIDDLEWARE_URL: "https://malaysiatransit.techmavie.digital"
+  NODE_ENV: "production"
