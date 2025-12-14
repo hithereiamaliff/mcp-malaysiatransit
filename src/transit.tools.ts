@@ -16,7 +16,7 @@ const MCP_CLIENT_HEADERS = {
 
 // Get middleware URL from environment
 const getMiddlewareUrl = (): string => {
-  return process.env.MIDDLEWARE_URL || 'http://localhost:3000';
+  return process.env.MIDDLEWARE_URL || 'https://malaysiatransit.techmavie.digital';
 };
 
 // Create axios instance with MCP client identification
