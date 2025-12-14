@@ -245,6 +245,392 @@ app.get('/analytics/tools', (req: Request, res: Response) => {
   });
 });
 
+// Analytics dashboard - visual HTML page
+app.get('/analytics/dashboard', (req: Request, res: Response) => {
+  trackRequest(req, '/analytics/dashboard');
+  
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Malaysia Transit MCP - Analytics Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      color: #e4e4e7;
+      padding: 20px;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+    }
+    header h1 {
+      font-size: 2rem;
+      background: linear-gradient(90deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+    header p { color: #a1a1aa; }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: transform 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-4px); }
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, #34d399, #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .stat-label { color: #a1a1aa; margin-top: 8px; font-size: 0.9rem; }
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .chart-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .chart-card h3 {
+      margin-bottom: 16px;
+      color: #e4e4e7;
+      font-size: 1.1rem;
+    }
+    .chart-container { position: relative; height: 300px; }
+    .recent-calls {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .recent-calls h3 { margin-bottom: 16px; }
+    .call-list { max-height: 400px; overflow-y: auto; }
+    .call-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    .call-tool {
+      font-weight: 600;
+      color: #60a5fa;
+      font-family: monospace;
+    }
+    .call-time { color: #71717a; font-size: 0.85rem; }
+    .call-client { color: #a1a1aa; font-size: 0.8rem; }
+    .refresh-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 50px;
+      cursor: pointer;
+      font-weight: 600;
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+      transition: transform 0.2s;
+    }
+    .refresh-btn:hover { transform: scale(1.05); }
+    .uptime-badge {
+      display: inline-block;
+      background: rgba(52, 211, 153, 0.2);
+      color: #34d399;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      margin-top: 8px;
+    }
+    @media (max-width: 768px) {
+      .charts-grid { grid-template-columns: 1fr; }
+      .stat-value { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🚌 Malaysia Transit MCP Analytics</h1>
+      <p>Real-time usage statistics for the MCP server</p>
+      <span class="uptime-badge" id="uptime">Loading...</span>
+    </header>
+    
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="totalRequests">-</div>
+        <div class="stat-label">Total Requests</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="totalToolCalls">-</div>
+        <div class="stat-label">Tool Calls</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="uniqueClients">-</div>
+        <div class="stat-label">Unique Clients</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="topTool">-</div>
+        <div class="stat-label">Most Used Tool</div>
+      </div>
+    </div>
+    
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>📊 Tool Usage Distribution</h3>
+        <div class="chart-container">
+          <canvas id="toolsChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3>📈 Hourly Requests (Last 24h)</h3>
+        <div class="chart-container">
+          <canvas id="hourlyChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3>🔧 Requests by Endpoint</h3>
+        <div class="chart-container">
+          <canvas id="endpointChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3>🌐 Top Clients by User Agent</h3>
+        <div class="chart-container">
+          <canvas id="clientsChart"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <div class="recent-calls">
+      <h3>🕐 Recent Tool Calls</h3>
+      <div class="call-list" id="recentCalls">
+        <p style="color: #71717a;">Loading...</p>
+      </div>
+    </div>
+  </div>
+  
+  <button class="refresh-btn" onclick="loadData()">🔄 Refresh</button>
+  
+  <script>
+    let toolsChart, hourlyChart, endpointChart, clientsChart;
+    
+    const chartColors = [
+      '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981',
+      '#06b6d4', '#f43f5e', '#84cc16', '#6366f1', '#14b8a6'
+    ];
+    
+    async function loadData() {
+      try {
+        const res = await fetch('./');
+        const data = await res.json();
+        updateDashboard(data);
+      } catch (err) {
+        console.error('Failed to load analytics:', err);
+      }
+    }
+    
+    function updateDashboard(data) {
+      // Update stats
+      document.getElementById('totalRequests').textContent = data.summary.totalRequests.toLocaleString();
+      document.getElementById('totalToolCalls').textContent = data.summary.totalToolCalls.toLocaleString();
+      document.getElementById('uniqueClients').textContent = data.summary.uniqueClients.toLocaleString();
+      document.getElementById('uptime').textContent = '⏱️ Uptime: ' + data.uptime;
+      
+      // Top tool
+      const tools = Object.entries(data.breakdown.byTool);
+      if (tools.length > 0) {
+        const topTool = tools.sort((a, b) => b[1] - a[1])[0][0];
+        document.getElementById('topTool').textContent = topTool.replace(/_/g, ' ').substring(0, 12);
+      }
+      
+      // Tools chart
+      updateToolsChart(data.breakdown.byTool);
+      
+      // Hourly chart
+      updateHourlyChart(data.hourlyRequests);
+      
+      // Endpoint chart
+      updateEndpointChart(data.breakdown.byEndpoint);
+      
+      // Clients chart
+      updateClientsChart(data.clients.byUserAgent);
+      
+      // Recent calls
+      updateRecentCalls(data.recentToolCalls);
+    }
+    
+    function updateToolsChart(toolData) {
+      const labels = Object.keys(toolData).slice(0, 10);
+      const values = Object.values(toolData).slice(0, 10);
+      
+      if (toolsChart) toolsChart.destroy();
+      toolsChart = new Chart(document.getElementById('toolsChart'), {
+        type: 'doughnut',
+        data: {
+          labels: labels.map(l => l.replace(/_/g, ' ')),
+          datasets: [{
+            data: values,
+            backgroundColor: chartColors,
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { color: '#a1a1aa', font: { size: 11 } } }
+          }
+        }
+      });
+    }
+    
+    function updateHourlyChart(hourlyData) {
+      const labels = Object.keys(hourlyData).map(h => h.split('T')[1] + ':00');
+      const values = Object.values(hourlyData);
+      
+      if (hourlyChart) hourlyChart.destroy();
+      hourlyChart = new Chart(document.getElementById('hourlyChart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Requests',
+            data: values,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#71717a' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { ticks: { color: '#71717a' }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true }
+          }
+        }
+      });
+    }
+    
+    function updateEndpointChart(endpointData) {
+      const labels = Object.keys(endpointData);
+      const values = Object.values(endpointData);
+      
+      if (endpointChart) endpointChart.destroy();
+      endpointChart = new Chart(document.getElementById('endpointChart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: chartColors,
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#71717a' }, grid: { display: false } },
+            y: { ticks: { color: '#71717a' }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true }
+          }
+        }
+      });
+    }
+    
+    function updateClientsChart(clientData) {
+      const entries = Object.entries(clientData).slice(0, 5);
+      const labels = entries.map(([k]) => k.substring(0, 30) + (k.length > 30 ? '...' : ''));
+      const values = entries.map(([, v]) => v);
+      
+      if (clientsChart) clientsChart.destroy();
+      clientsChart = new Chart(document.getElementById('clientsChart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: chartColors.slice(0, 5),
+            borderRadius: 8
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#71717a' }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true },
+            y: { ticks: { color: '#71717a', font: { size: 10 } }, grid: { display: false } }
+          }
+        }
+      });
+    }
+    
+    function updateRecentCalls(calls) {
+      const container = document.getElementById('recentCalls');
+      if (!calls || calls.length === 0) {
+        container.innerHTML = '<p style="color: #71717a;">No tool calls yet</p>';
+        return;
+      }
+      
+      container.innerHTML = calls.slice(0, 20).map(call => \`
+        <div class="call-item">
+          <div>
+            <span class="call-tool">\${call.tool}</span>
+            <div class="call-client">\${call.userAgent}</div>
+          </div>
+          <span class="call-time">\${new Date(call.timestamp).toLocaleTimeString()}</span>
+        </div>
+      \`).join('');
+    }
+    
+    // Load data on page load and auto-refresh every 30 seconds
+    loadData();
+    setInterval(loadData, 30000);
+  </script>
+</body>
+</html>
+  `;
+  
+  res.setHeader('Content-Type', 'text/html');
+  res.send(html);
+});
+
 // Analytics endpoint - reset (protected by query param)
 app.post('/analytics/reset', (req: Request, res: Response) => {
   const resetKey = req.query.key;
