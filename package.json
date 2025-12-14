@@ -14,11 +14,14 @@
   ],
   "scripts": {
     "start": "node index.js",
+    "start:http": "node dist/http-server.js",
     "build": "tsc",
     "prepublishOnly": "npm run build",
     "dev": "npx @smithery/cli@latest dev",
+    "dev:http": "npx tsx src/http-server.ts",
     "playground": "npx @smithery/cli@latest build && npx @smithery/cli@latest playground --port 3000",
     "serve": "npm run build && node dist/server.js",
+    "serve:http": "npm run build && node dist/http-server.js",
     "inspect": "npm run build && npx @modelcontextprotocol/inspector node dist/inspector.js",
     "deploy": "npm run build && npx @smithery/cli@latest deploy",
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -49,7 +52,9 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
     "axios": "^1.11.0",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.1",
+    "express": "^4.21.0",
     "zod": "^3.25.57"
   },
   "devDependencies": {
