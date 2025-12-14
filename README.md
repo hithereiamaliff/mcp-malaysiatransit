@@ -4,6 +4,8 @@ MCP (Model Context Protocol) server for Malaysia's public transit system, provid
 
 **MCP Endpoint:** `https://mcp.techmavie.digital/malaysiatransit/mcp`
 
+**Analytics Dashboard:** [`https://mcp.techmavie.digital/malaysiatransit/analytics/dashboard`](https://mcp.techmavie.digital/malaysiatransit/analytics/dashboard)
+
 **Data Source:** [Malaysia Transit Middleware](https://github.com/hithereiamaliff/malaysiatransit-middleware)
 
 ## Table of Contents
@@ -47,7 +49,9 @@ MCP (Model Context Protocol) server for Malaysia's public transit system, provid
 - **🆕 KTM Intercity** - SH and ERT routes (Tumpat - Gemas - JB Sentral)
 - **🆕 Penang Ferry** - Butterworth to George Town ferry information
 - **🆕 API Analytics** - View API usage statistics, endpoint metrics, and client tracking
+- **🆕 Analytics Dashboard** - Visual dashboard with charts for MCP server usage monitoring
 - **🆕 Client Identification** - MCP identifies itself to middleware for analytics tracking
+- **🆕 Auto-Deployment** - GitHub Actions workflow for automatic VPS deployment
 
 ## Architecture
 
@@ -762,7 +766,21 @@ The `detect_location_area` tool automatically maps common locations to service a
 The MCP server is deployed at:
 - **Endpoint:** `https://mcp.techmavie.digital/malaysiatransit/mcp`
 - **Health Check:** `https://mcp.techmavie.digital/malaysiatransit/health`
+- **Analytics Dashboard:** `https://mcp.techmavie.digital/malaysiatransit/analytics/dashboard`
+- **Analytics API:** `https://mcp.techmavie.digital/malaysiatransit/analytics`
 - **Transport:** Streamable HTTP
+
+### Analytics Dashboard
+
+The MCP server includes a built-in analytics dashboard that tracks:
+- **Total requests and tool calls**
+- **Tool usage distribution** (doughnut chart)
+- **Hourly request trends** (last 24 hours)
+- **Requests by endpoint** (bar chart)
+- **Top clients by user agent**
+- **Recent tool calls feed**
+
+The dashboard auto-refreshes every 30 seconds.
 
 ### Self-Hosting
 
@@ -776,6 +794,16 @@ docker compose up -d --build
 npm run build
 npm run start:http
 ```
+
+### Auto-Deployment
+
+This repository includes a GitHub Actions workflow for automatic VPS deployment. When you push to `main`, the server automatically redeploys.
+
+To set up auto-deployment, add these secrets to your GitHub repository:
+- `VPS_HOST` - Your VPS IP address
+- `VPS_USERNAME` - SSH username (e.g., `root`)
+- `VPS_PORT` - SSH port (e.g., `22`)
+- `VPS_SSH_KEY` - Private SSH key for authentication
 
 ## Troubleshooting
 
@@ -825,13 +853,21 @@ If location detection returns incorrect results:
 malaysiatransit-mcp/
 ├── src/
 │   ├── index.ts              # Main MCP server entry point
+│   ├── http-server.ts        # Streamable HTTP server with analytics
 │   ├── transit.tools.ts      # Transit tool implementations
 │   ├── geocoding.utils.ts    # Location detection utilities
 │   ├── inspector.ts          # MCP Inspector entry point
 │   └── server.ts             # HTTP server for testing
+├── deploy/
+│   ├── DEPLOYMENT.md         # VPS deployment guide
+│   └── nginx-mcp.conf        # Nginx reverse proxy config
+├── .github/
+│   └── workflows/
+│       └── deploy-vps.yml    # GitHub Actions auto-deploy
+├── docker-compose.yml        # Docker deployment config
+├── Dockerfile                # Container build config
 ├── package.json              # Project dependencies
 ├── tsconfig.json             # TypeScript configuration
-├── smithery.yaml             # Smithery configuration
 ├── .env.sample               # Environment variables template
 ├── README.md                 # This file
 └── LICENSE                   # MIT License
