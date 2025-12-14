@@ -111,5 +111,3 @@ export default function createStatelessServer({
   return server.server;
 }
 
-// If this file is run directly, log a message
-console.log('Malaysia Transit MCP module loaded');
