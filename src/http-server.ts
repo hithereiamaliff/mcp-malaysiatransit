@@ -126,6 +126,8 @@ function getUptime(): string {
 const mcpServer = new McpServer({
   name: 'Malaysia Transit MCP Server',
   version: '2.1.0',
+  // Note: Icon URL for clients that support it
+  // https://malaysiatransit.techmavie.digital/malaysiatransitlogo/Malaysia%20Transit%20Logo%20(Transparent).png
 });
 
 // Register all transit tools
@@ -694,12 +696,14 @@ app.get('/', (req: Request, res: Response) => {
     name: 'Malaysia Transit MCP Server',
     version: '2.1.0',
     description: 'MCP server for Malaysia public transit information',
+    icon: 'https://malaysiatransit.techmavie.digital/malaysiatransitlogo/Malaysia%20Transit%20Logo%20(Transparent).png',
     transport: 'streamable-http',
     endpoints: {
       mcp: '/mcp',
       health: '/health',
       analytics: '/analytics',
       analyticsTools: '/analytics/tools',
+      analyticsDashboard: '/analytics/dashboard',
     },
     documentation: 'https://github.com/hithereiamaliff/mcp-malaysiatransit',
   });
