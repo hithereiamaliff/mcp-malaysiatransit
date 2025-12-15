@@ -551,7 +551,7 @@ ARRIVAL DATA:
   // SCHEDULE TOOLS (NEW)
   // ============================================================================
 
-  // BAS.MY areas that support schedule data
+  // Areas that support schedule data
   const SCHEDULE_SUPPORTED_AREAS = ['penang', 'ipoh', 'seremban', 'kangar', 'alor-setar', 'kota-bharu', 'kuala-terengganu', 'melaka', 'johor', 'kuching'];
   
 
