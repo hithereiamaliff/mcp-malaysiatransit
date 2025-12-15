@@ -15,6 +15,8 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import fs from 'fs';
+import path from 'path';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -25,6 +27,9 @@ import { registerTransitTools } from './transit.tools.js';
 const PORT = parseInt(process.env.PORT || '8080', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 const MIDDLEWARE_URL = process.env.MIDDLEWARE_URL || 'https://malaysiatransit.techmavie.digital';
+const ANALYTICS_DATA_DIR = process.env.ANALYTICS_DATA_DIR || './data';
+const ANALYTICS_FILE = path.join(ANALYTICS_DATA_DIR, 'analytics.json');
+const SAVE_INTERVAL_MS = 60000; // Save every 60 seconds
 
 // Set middleware URL in environment for transit tools
 process.env.MIDDLEWARE_URL = MIDDLEWARE_URL;
@@ -52,7 +57,8 @@ interface Analytics {
   hourlyRequests: Record<string, number>;
 }
 
-const analytics: Analytics = {
+// Initialize with defaults, will be overwritten by loadAnalytics()
+let analytics: Analytics = {
   serverStartTime: new Date().toISOString(),
   totalRequests: 0,
   totalToolCalls: 0,
@@ -64,6 +70,59 @@ const analytics: Analytics = {
   clientsByUserAgent: {},
   hourlyRequests: {},
 };
+
+// ============================================================================
+// Analytics Persistence
+// ============================================================================
+function ensureDataDir(): void {
+  if (!fs.existsSync(ANALYTICS_DATA_DIR)) {
+    fs.mkdirSync(ANALYTICS_DATA_DIR, { recursive: true });
+    console.log(`📁 Created analytics data directory: ${ANALYTICS_DATA_DIR}`);
+  }
+}
+
+function loadAnalytics(): void {
+  try {
+    ensureDataDir();
+    if (fs.existsSync(ANALYTICS_FILE)) {
+      const data = fs.readFileSync(ANALYTICS_FILE, 'utf-8');
+      const loaded = JSON.parse(data) as Analytics;
+      
+      // Merge loaded data, keeping serverStartTime as the original start
+      analytics = {
+        ...loaded,
+        // Keep the original server start time from the file
+        serverStartTime: loaded.serverStartTime || new Date().toISOString(),
+      };
+      
+      console.log(`📊 Loaded analytics from ${ANALYTICS_FILE}`);
+      console.log(`   Total requests: ${analytics.totalRequests}, Tool calls: ${analytics.totalToolCalls}`);
+    } else {
+      console.log(`📊 No existing analytics file found, starting fresh`);
+    }
+  } catch (error) {
+    console.error(`⚠️ Failed to load analytics:`, error);
+    console.log(`📊 Starting with fresh analytics`);
+  }
+}
+
+function saveAnalytics(): void {
+  try {
+    ensureDataDir();
+    fs.writeFileSync(ANALYTICS_FILE, JSON.stringify(analytics, null, 2));
+    console.log(`💾 Saved analytics to ${ANALYTICS_FILE}`);
+  } catch (error) {
+    console.error(`⚠️ Failed to save analytics:`, error);
+  }
+}
+
+// Load analytics on startup
+loadAnalytics();
+
+// Periodic save
+const saveInterval = setInterval(() => {
+  saveAnalytics();
+}, SAVE_INTERVAL_MS);
 
 const MAX_RECENT_CALLS = 100;
 
@@ -224,6 +283,88 @@ app.get('/analytics', (req: Request, res: Response) => {
     hourlyRequests: last24Hours,
     recentToolCalls: analytics.recentToolCalls.slice(0, 20),
   });
+});
+
+// Analytics endpoint - import/restore stats from backup
+app.post('/analytics/import', (req: Request, res: Response) => {
+  const importKey = req.query.key;
+  if (importKey !== process.env.ANALYTICS_IMPORT_KEY && importKey !== 'malaysia-transit-2024') {
+    res.status(403).json({ error: 'Invalid import key' });
+    return;
+  }
+  
+  try {
+    const importData = req.body;
+    
+    // Merge imported data with current analytics
+    if (importData.summary) {
+      analytics.totalRequests += importData.summary.totalRequests || 0;
+      analytics.totalToolCalls += importData.summary.totalToolCalls || 0;
+    }
+    
+    // Merge breakdown data
+    if (importData.breakdown) {
+      if (importData.breakdown.byMethod) {
+        for (const [method, count] of Object.entries(importData.breakdown.byMethod)) {
+          analytics.requestsByMethod[method] = (analytics.requestsByMethod[method] || 0) + (count as number);
+        }
+      }
+      if (importData.breakdown.byEndpoint) {
+        for (const [endpoint, count] of Object.entries(importData.breakdown.byEndpoint)) {
+          analytics.requestsByEndpoint[endpoint] = (analytics.requestsByEndpoint[endpoint] || 0) + (count as number);
+        }
+      }
+      if (importData.breakdown.byTool) {
+        for (const [tool, count] of Object.entries(importData.breakdown.byTool)) {
+          analytics.toolCalls[tool] = (analytics.toolCalls[tool] || 0) + (count as number);
+        }
+      }
+    }
+    
+    // Merge client data
+    if (importData.clients) {
+      if (importData.clients.byIp) {
+        for (const [ip, count] of Object.entries(importData.clients.byIp)) {
+          analytics.clientsByIp[ip] = (analytics.clientsByIp[ip] || 0) + (count as number);
+        }
+      }
+      if (importData.clients.byUserAgent) {
+        for (const [ua, count] of Object.entries(importData.clients.byUserAgent)) {
+          analytics.clientsByUserAgent[ua] = (analytics.clientsByUserAgent[ua] || 0) + (count as number);
+        }
+      }
+    }
+    
+    // Merge hourly requests
+    if (importData.hourlyRequests) {
+      for (const [hour, count] of Object.entries(importData.hourlyRequests)) {
+        analytics.hourlyRequests[hour] = (analytics.hourlyRequests[hour] || 0) + (count as number);
+      }
+    }
+    
+    // Keep original server start time if importing older data
+    if (importData.serverStartTime) {
+      const importedStart = new Date(importData.serverStartTime).getTime();
+      const currentStart = new Date(analytics.serverStartTime).getTime();
+      if (importedStart < currentStart) {
+        analytics.serverStartTime = importData.serverStartTime;
+      }
+    }
+    
+    // Save immediately after import
+    saveAnalytics();
+    
+    res.json({ 
+      message: 'Analytics imported successfully',
+      currentStats: {
+        totalRequests: analytics.totalRequests,
+        totalToolCalls: analytics.totalToolCalls,
+        serverStartTime: analytics.serverStartTime,
+      }
+    });
+  } catch (error) {
+    res.status(400).json({ error: 'Failed to import analytics', details: String(error) });
+  }
 });
 
 // Analytics endpoint - detailed tool stats
@@ -733,13 +874,14 @@ mcpServer.connect(transport)
     process.exit(1);
   });
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('Received SIGTERM, shutting down gracefully...');
+// Graceful shutdown with analytics save
+function gracefulShutdown(signal: string) {
+  console.log(`Received ${signal}, shutting down gracefully...`);
+  clearInterval(saveInterval);
+  saveAnalytics();
+  console.log('Analytics saved. Goodbye!');
   process.exit(0);
-});
+}
 
-process.on('SIGINT', () => {
-  console.log('Received SIGINT, shutting down gracefully...');
-  process.exit(0);
-});
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

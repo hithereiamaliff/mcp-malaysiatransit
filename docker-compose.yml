@@ -15,6 +15,9 @@ services:
       - HOST=0.0.0.0
       - MIDDLEWARE_URL=https://malaysiatransit.techmavie.digital
       - NODE_ENV=production
+      - ANALYTICS_DATA_DIR=/app/data
+    volumes:
+      - analytics-data:/app/data
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]  # Internal port stays 8080
       interval: 30s
@@ -32,3 +35,7 @@ services:
 networks:
   mcp-network:
     driver: bridge
+
+volumes:
+  analytics-data:
+    driver: local
