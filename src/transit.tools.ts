@@ -1256,8 +1256,147 @@ JOURNEY FARE DETAILS:
   // ============================================================================
 
   server.tool(
-    'get_penang_ferry_info',
-    'Get Penang Ferry fare information, schedule, terminals, and payment methods. The ferry operates between Butterworth and George Town.',
+    'get_penang_ferry_overview',
+    'Get Penang Ferry service overview including terminals, operating hours, frequency, and contact information. The ferry operates between Butterworth and George Town.',
+    {},
+    async () => {
+      try {
+        const response = await axios.get(`${getMiddlewareUrl()}/api/ferry/penang`, createApiConfig());
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response.data, null, 2),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: 'Failed to fetch Penang Ferry overview',
+                message: error.message,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'get_penang_ferry_schedule',
+    'Get full Penang Ferry schedule with departure times. Supports filtering by direction and day type.',
+    {
+      direction: z.enum(['butterworth-georgetown', 'georgetown-butterworth']).optional().describe('Filter by direction (optional)'),
+      day: z.enum(['weekday', 'weekend']).optional().describe('Filter by day type (optional)'),
+    },
+    async ({ direction, day }) => {
+      try {
+        const params: any = {};
+        if (direction) params.direction = direction;
+        if (day) params.day = day;
+        
+        const response = await axios.get(`${getMiddlewareUrl()}/api/ferry/penang/schedule`, createApiConfig(params));
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response.data, null, 2),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: 'Failed to fetch Penang Ferry schedule',
+                message: error.message,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'get_penang_ferry_next_departure',
+    'Get next ferry departures from both Butterworth and George Town terminals in real-time. Shows minutes until departure.',
+    {},
+    async () => {
+      try {
+        const response = await axios.get(`${getMiddlewareUrl()}/api/ferry/penang/next`, createApiConfig());
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response.data, null, 2),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: 'Failed to fetch next ferry departures',
+                message: error.message,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'get_penang_ferry_terminals',
+    'Get detailed information about Penang Ferry terminals including facilities, connections, parking, and nearby attractions.',
+    {},
+    async () => {
+      try {
+        const response = await axios.get(`${getMiddlewareUrl()}/api/ferry/penang/terminals`, createApiConfig());
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response.data, null, 2),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: 'Failed to fetch ferry terminal information',
+                message: error.message,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'get_penang_ferry_fare',
+    'Get Penang Ferry fare information, payment methods, and terminal coordinates.',
     {},
     async () => {
       try {
@@ -1277,7 +1416,7 @@ JOURNEY FARE DETAILS:
             {
               type: 'text',
               text: JSON.stringify({
-                error: 'Failed to fetch Penang Ferry information',
+                error: 'Failed to fetch Penang Ferry fare information',
                 message: error.message,
               }, null, 2),
             },
