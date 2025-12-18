@@ -161,51 +161,74 @@ export interface GeocodingResult {
 
 /**
  * Detect the transit service area from a location query
+ * IMPORTANT: This function now ALWAYS attempts to geocode to get real coordinates,
+ * even when the area is detected via direct_match or state_mapping.
+ * This ensures AI models can use the coordinates for nearby stop searches.
  */
 export async function detectAreaFromLocation(query: string): Promise<GeocodingResult | null> {
   const normalizedQuery = query.toLowerCase().trim();
   
-  // 1. Check direct location mapping first (fastest)
+  let detectedArea: string | null = null;
+  let detectedState: string | null = null;
+  let matchSource: 'direct_match' | 'state_mapping' | 'geocoding' = 'geocoding';
+  
+  // 1. Check direct location mapping first (fastest for area detection)
   for (const [location, area] of Object.entries(LOCATION_TO_AREA_MAP)) {
     if (normalizedQuery.includes(location)) {
-      return {
-        area,
-        confidence: 'high',
-        location: {
-          name: query,
-          lat: 0,
-          lon: 0,
-        },
-        source: 'direct_match',
-      };
+      detectedArea = area;
+      matchSource = 'direct_match';
+      break;
     }
   }
   
-  // 2. Check state mapping
-  for (const [state, area] of Object.entries(STATE_TO_AREA_MAP)) {
-    if (normalizedQuery.includes(state)) {
-      return {
-        area,
-        confidence: 'high',
-        location: {
-          name: query,
-          state,
-          lat: 0,
-          lon: 0,
-        },
-        source: 'state_mapping',
-      };
+  // 2. Check state mapping if no direct match
+  if (!detectedArea) {
+    for (const [state, area] of Object.entries(STATE_TO_AREA_MAP)) {
+      if (normalizedQuery.includes(state)) {
+        detectedArea = area;
+        detectedState = state;
+        matchSource = 'state_mapping';
+        break;
+      }
     }
   }
   
-  // 3. Use geocoding as fallback (Google Maps or Nominatim)
+  // 3. ALWAYS try to geocode to get real coordinates
+  // This is critical for AI models that need coordinates for nearby stop searches
   try {
     const geocodingResult = await geocodeLocation(query);
     if (geocodingResult) {
+      // If we already detected an area via mapping, use that area but with geocoded coordinates
+      if (detectedArea) {
+        return {
+          area: detectedArea,
+          confidence: 'high',
+          location: geocodingResult.location,
+          source: matchSource,
+        };
+      }
+      // Otherwise use the geocoding result as-is
       return geocodingResult;
     }
   } catch (error) {
     console.error('Geocoding error:', error);
+  }
+  
+  // 4. If geocoding failed but we have an area from mapping, return with zero coordinates
+  // (AI should use the 'location' parameter in nearby tools instead of coordinates)
+  if (detectedArea) {
+    return {
+      area: detectedArea,
+      confidence: 'medium', // Lower confidence since we couldn't geocode
+      location: {
+        name: query,
+        state: detectedState || undefined,
+        lat: 0,
+        lon: 0,
+      },
+      source: matchSource,
+      // Add a hint for AI models
+    };
   }
   
   return null;

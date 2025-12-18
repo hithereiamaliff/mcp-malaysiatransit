@@ -71,7 +71,7 @@ export function registerTransitTools(server: McpServer): void {
 
   server.tool(
     'detect_location_area',
-    'Automatically detect which transit service area a location belongs to using geocoding. Use this when the user mentions a place name without specifying the area (e.g., "KTM Alor Setar", "Komtar", "KLCC")',
+    'Automatically detect which transit service area a location belongs to using geocoding. Use this when the user mentions a place name without specifying the area (e.g., "KTM Alor Setar", "Komtar", "KLCC"). IMPORTANT: After detecting the area, use find_nearby_stops_with_arrivals or find_nearby_stops with the location parameter - these tools handle geocoding automatically and are more reliable than using coordinates from this tool.',
     {
       location: z.coerce.string().describe('Location name or place (e.g., "KTM Alor Setar", "Komtar", "Pavilion KL")'),
     },
@@ -80,6 +80,11 @@ export function registerTransitTools(server: McpServer): void {
         const result = await detectAreaFromLocation(location);
         
         if (result) {
+          // Add guidance for AI models on next steps
+          const guidance = result.location.lat === 0 || result.location.lon === 0
+            ? 'NOTE: Geocoding did not return coordinates. Use find_nearby_stops_with_arrivals or find_nearby_stops with the "location" parameter instead of coordinates.'
+            : 'TIP: You can use find_nearby_stops_with_arrivals with the "location" parameter for a simpler workflow.';
+          
           return {
             content: [
               {
@@ -91,6 +96,12 @@ export function registerTransitTools(server: McpServer): void {
                   location: result.location,
                   source: result.source,
                   message: `Location "${location}" detected in service area: ${result.area}`,
+                  nextStepGuidance: guidance,
+                  recommendedTools: [
+                    'find_nearby_stops_with_arrivals - Find nearby stops AND get arrivals in one call',
+                    'find_nearby_stops - Find nearby stops (supports location parameter)',
+                    'search_stops - Search stops by name (auto-geocodes if no match)',
+                  ],
                 }, null, 2),
               },
             ],
@@ -169,10 +180,10 @@ export function registerTransitTools(server: McpServer): void {
 
   server.tool(
     'search_stops',
-    'Search for bus or train stops by name in a specific area. IMPORTANT: If you are unsure which area a location belongs to, use detect_location_area first to automatically determine the correct area.',
+    'Search for bus or train stops by name in a specific area. The middleware will automatically geocode place names (like "Ideal Foresta") and find nearby stops if no exact stop name match is found. IMPORTANT: If you are unsure which area a location belongs to, use detect_location_area first to automatically determine the correct area.',
     {
       area: z.coerce.string().describe('Service area ID (e.g., "penang", "klang-valley"). Use detect_location_area if unsure.'),
-      query: z.coerce.string().describe('Search query (e.g., "Komtar", "KLCC")'),
+      query: z.coerce.string().describe('Search query - can be a stop name (e.g., "Komtar") OR a place name (e.g., "Ideal Foresta"). Place names will be auto-geocoded to find nearby stops.'),
     },
     async ({ area, query }) => {
       try {
@@ -320,16 +331,40 @@ ARRIVAL DATA:
 
   server.tool(
     'find_nearby_stops',
-    'Find bus or train stops near a specific location',
+    'Find bus or train stops near a specific location. You can provide EITHER coordinates (lat/lon) OR a location name - the middleware will geocode place names automatically.',
     {
       area: z.coerce.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
-      lat: z.coerce.number().describe('Latitude coordinate'),
-      lon: z.coerce.number().describe('Longitude coordinate'),
+      lat: z.coerce.number().optional().describe('Latitude coordinate (optional if location is provided)'),
+      lon: z.coerce.number().optional().describe('Longitude coordinate (optional if location is provided)'),
+      location: z.coerce.string().optional().describe('Place name to geocode (e.g., "Ideal Foresta", "KLCC", "Komtar"). Use this instead of lat/lon for convenience.'),
       radius: z.coerce.number().optional().default(500).describe('Search radius in meters (default: 500)'),
     },
-    async ({ area, lat, lon, radius }) => {
+    async ({ area, lat, lon, location, radius }) => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/stops/nearby`, createApiConfig({ area, lat, lon, radius }));
+        const params: any = { area, radius };
+        
+        // If location is provided, use it for geocoding
+        if (location) {
+          params.location = location;
+        } else if (lat !== undefined && lon !== undefined) {
+          params.lat = lat;
+          params.lon = lon;
+        } else {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  error: 'Missing location parameters',
+                  message: 'Please provide either a location name OR lat/lon coordinates',
+                }, null, 2),
+              },
+            ],
+            isError: true,
+          };
+        }
+        
+        const response = await axios.get(`${getMiddlewareUrl()}/api/stops/nearby`, createApiConfig(params));
         
         return {
           content: [
@@ -346,6 +381,133 @@ ARRIVAL DATA:
               type: 'text',
               text: JSON.stringify({
                 error: `Failed to find nearby stops`,
+                message: error.message,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'find_nearby_stops_with_arrivals',
+    'Find bus stops near a location AND get real-time arrival predictions in one call. RECOMMENDED: Use this tool when users ask about nearby bus stops and arrival times together. Accepts a place name (e.g., "Ideal Foresta") - the middleware handles geocoding automatically.',
+    {
+      area: z.coerce.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
+      location: z.coerce.string().optional().describe('Place name to geocode (e.g., "Ideal Foresta", "KLCC", "Komtar")'),
+      lat: z.coerce.number().optional().describe('Latitude coordinate (optional if location is provided)'),
+      lon: z.coerce.number().optional().describe('Longitude coordinate (optional if location is provided)'),
+      radius: z.coerce.number().optional().default(500).describe('Search radius in meters (default: 500)'),
+      routeFilter: z.coerce.string().optional().describe('Filter arrivals by route number (e.g., "302", "101")'),
+    },
+    async ({ area, location, lat, lon, radius, routeFilter }) => {
+      try {
+        const params: any = { area, radius };
+        
+        if (location) {
+          params.location = location;
+        } else if (lat !== undefined && lon !== undefined) {
+          params.lat = lat;
+          params.lon = lon;
+        } else {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  error: 'Missing location parameters',
+                  message: 'Please provide either a location name OR lat/lon coordinates',
+                }, null, 2),
+              },
+            ],
+            isError: true,
+          };
+        }
+        
+        if (routeFilter) {
+          params.route = routeFilter;
+        }
+        
+        const response = await axios.get(`${getMiddlewareUrl()}/api/stops/nearby/arrivals`, createApiConfig(params));
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response.data, null, 2),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: `Failed to find nearby stops with arrivals`,
+                message: error.message,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'find_nearby_stops_with_routes',
+    'Find bus stops near a location AND get all routes serving those stops in one call. Accepts a place name (e.g., "Ideal Foresta") - the middleware handles geocoding automatically.',
+    {
+      area: z.coerce.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
+      location: z.coerce.string().optional().describe('Place name to geocode (e.g., "Ideal Foresta", "KLCC", "Komtar")'),
+      lat: z.coerce.number().optional().describe('Latitude coordinate (optional if location is provided)'),
+      lon: z.coerce.number().optional().describe('Longitude coordinate (optional if location is provided)'),
+      radius: z.coerce.number().optional().default(500).describe('Search radius in meters (default: 500)'),
+    },
+    async ({ area, location, lat, lon, radius }) => {
+      try {
+        const params: any = { area, radius };
+        
+        if (location) {
+          params.location = location;
+        } else if (lat !== undefined && lon !== undefined) {
+          params.lat = lat;
+          params.lon = lon;
+        } else {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  error: 'Missing location parameters',
+                  message: 'Please provide either a location name OR lat/lon coordinates',
+                }, null, 2),
+              },
+            ],
+            isError: true,
+          };
+        }
+        
+        const response = await axios.get(`${getMiddlewareUrl()}/api/stops/nearby/routes`, createApiConfig(params));
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response.data, null, 2),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: `Failed to find nearby stops with routes`,
                 message: error.message,
               }, null, 2),
             },
@@ -1215,16 +1377,39 @@ JOURNEY FARE DETAILS:
 
   server.tool(
     'find_nearby_ktm_stations',
-    'Find KTM stations near a specific location. Useful for finding the closest train station.',
+    'Find KTM stations near a specific location. You can provide EITHER coordinates (lat/lon) OR a location name - the middleware will geocode place names automatically.',
     {
-      lat: z.coerce.number().describe('Latitude coordinate'),
-      lon: z.coerce.number().describe('Longitude coordinate'),
+      location: z.coerce.string().optional().describe('Place name to geocode (e.g., "Butterworth", "Ipoh", "Padang Besar"). Use this instead of lat/lon for convenience.'),
+      lat: z.coerce.number().optional().describe('Latitude coordinate (optional if location is provided)'),
+      lon: z.coerce.number().optional().describe('Longitude coordinate (optional if location is provided)'),
       radius: z.coerce.number().optional().default(10).describe('Search radius in kilometers (default: 10)'),
       type: z.enum(['ktm-komuter-utara', 'ktm-intercity']).describe('Schedule type: ktm-komuter-utara or ktm-intercity'),
     },
-    async ({ lat, lon, radius, type }) => {
+    async ({ location, lat, lon, radius, type }) => {
       try {
-        const response = await axios.get(`${getMiddlewareUrl()}/api/ktm/nearby`, createApiConfig({ lat, lon, radius, type }));
+        const params: any = { radius, type };
+        
+        if (location) {
+          params.location = location;
+        } else if (lat !== undefined && lon !== undefined) {
+          params.lat = lat;
+          params.lon = lon;
+        } else {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  error: 'Missing location parameters',
+                  message: 'Please provide either a location name OR lat/lon coordinates',
+                }, null, 2),
+              },
+            ],
+            isError: true,
+          };
+        }
+        
+        const response = await axios.get(`${getMiddlewareUrl()}/api/ktm/nearby`, createApiConfig(params));
         
         return {
           content: [
