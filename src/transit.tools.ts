@@ -559,11 +559,48 @@ ARRIVAL DATA:
   );
 
   server.tool(
-    'get_route_details',
-    'Get detailed information about a specific route including stops and geometry',
+    'get_route_stops',
+    'Get all stops on a specific route. Use this to find which stops a bus/train route serves. IMPORTANT: First call list_routes to get the correct route_id.',
     {
       area: z.coerce.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
-      routeId: z.coerce.string().describe('Route ID from list_routes'),
+      routeId: z.coerce.string().describe('Route ID from list_routes (e.g., "302", "101")'),
+    },
+    async ({ area, routeId }) => {
+      try {
+        // Use geometry endpoint which includes stops
+        const response = await axios.get(`${getMiddlewareUrl()}/api/routes/${routeId}/geometry`, createApiConfig({ area }));
+        
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(response.data, null, 2),
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                error: `Failed to fetch stops for route ${routeId}`,
+                message: error.message,
+              }, null, 2),
+            },
+          ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'get_route_details',
+    'Get detailed information about a specific route including stops and geometry. IMPORTANT: First call list_routes to get the correct route_id.',
+    {
+      area: z.coerce.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
+      routeId: z.coerce.string().describe('Route ID from list_routes (e.g., "302", "101")'),
     },
     async ({ area, routeId }) => {
       try {
