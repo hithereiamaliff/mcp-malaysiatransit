@@ -16,6 +16,7 @@ services:
       - MIDDLEWARE_URL=https://malaysiatransit.techmavie.digital
       - NODE_ENV=production
       - ANALYTICS_DATA_DIR=/app/data
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
     volumes:
       - analytics-data:/app/data
     healthcheck:

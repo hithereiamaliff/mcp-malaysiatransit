@@ -1,15 +1,12 @@
 /**
- * Geocoding utilities using the Malaysia Transit Middleware's geocoding endpoint
- * The middleware has Google Maps API configured, so we delegate geocoding to it
- * Falls back to Nominatim if middleware geocoding fails
+ * Geocoding utilities using Google Maps API (primary) and Nominatim (fallback)
+ * Maps Malaysian locations to transit service areas
  */
 
 import axios from 'axios';
 
-// Get middleware URL from environment
-const getMiddlewareUrl = (): string => {
-  return process.env.MIDDLEWARE_URL || 'https://malaysiatransit.techmavie.digital';
-};
+// Google Maps API endpoint
+const GOOGLE_MAPS_API = 'https://maps.googleapis.com/maps/api/geocode/json';
 
 // Nominatim API endpoint (fallback)
 const NOMINATIM_API = 'https://nominatim.openstreetmap.org';
@@ -17,9 +14,9 @@ const NOMINATIM_API = 'https://nominatim.openstreetmap.org';
 // User agent for Nominatim (required by usage policy)
 const USER_AGENT = 'MalaysiaTransitMCP/1.0';
 
-// MCP Client Identification Header
-const MCP_CLIENT_HEADERS = {
-  'X-App-Name': 'Malaysia-Transit-MCP',
+// Get Google Maps API key from environment
+const getGoogleMapsApiKey = (): string | undefined => {
+  return process.env.GOOGLE_MAPS_API_KEY;
 };
 
 // Mapping of Malaysian states/regions to transit service areas
@@ -248,16 +245,19 @@ export async function detectAreaFromLocation(query: string): Promise<GeocodingRe
 }
 
 /**
- * Geocode a location using the middleware's /api/geocode endpoint (primary) or Nominatim (fallback)
- * The middleware has Google Maps API configured, so we delegate geocoding to it
+ * Geocode a location using Google Maps API (primary) or Nominatim (fallback)
  */
 async function geocodeLocation(query: string): Promise<GeocodingResult | null> {
-  // Try middleware geocoding first (uses Google Maps API)
-  try {
-    const result = await geocodeWithMiddleware(query);
-    if (result) return result;
-  } catch (error: any) {
-    console.error('Middleware geocoding failed, falling back to Nominatim:', error.message);
+  const apiKey = getGoogleMapsApiKey();
+  
+  // Try Google Maps first if API key is available
+  if (apiKey) {
+    try {
+      const result = await geocodeWithGoogleMaps(query, apiKey);
+      if (result) return result;
+    } catch (error: any) {
+      console.error('Google Maps geocoding failed, falling back to Nominatim:', error.message);
+    }
   }
   
   // Fallback to Nominatim
@@ -265,67 +265,83 @@ async function geocodeLocation(query: string): Promise<GeocodingResult | null> {
 }
 
 /**
- * Geocode using the Malaysia Transit Middleware's /api/geocode endpoint
- * This endpoint uses Google Maps API which is already configured on the middleware
+ * Geocode using Google Maps Geocoding API
  */
-async function geocodeWithMiddleware(query: string): Promise<GeocodingResult | null> {
+async function geocodeWithGoogleMaps(query: string, apiKey: string): Promise<GeocodingResult | null> {
   try {
-    const response = await axios.get(`${getMiddlewareUrl()}/api/geocode`, {
+    // Add "Malaysia" to the query if not already present
+    const searchQuery = query.toLowerCase().includes('malaysia') 
+      ? query 
+      : `${query}, Malaysia`;
+    
+    const response = await axios.get(GOOGLE_MAPS_API, {
       params: {
-        place: query,
+        address: searchQuery,
+        key: apiKey,
+        region: 'my', // Bias results to Malaysia
+        components: 'country:MY', // Restrict to Malaysia
       },
-      headers: MCP_CLIENT_HEADERS,
-      timeout: 10000,
+      timeout: 5000,
     });
     
-    if (response.data && response.data.lat && response.data.lon) {
-      const result = response.data;
+    if (response.data.status === 'OK' && response.data.results.length > 0) {
+      const result = response.data.results[0];
+      const addressComponents = result.address_components || [];
       
-      // Extract state from formatted address for area mapping
-      const formattedAddress = (result.formattedAddress || '').toLowerCase();
-      let area: string | null = null;
+      // Extract state information from address components
       let state = '';
-      
-      // Try to map from formatted address to area
-      for (const [key, value] of Object.entries(STATE_TO_AREA_MAP)) {
-        if (formattedAddress.includes(key)) {
-          area = value;
-          state = key;
+      for (const component of addressComponents) {
+        if (component.types.includes('administrative_area_level_1')) {
+          state = component.long_name.toLowerCase();
           break;
+        }
+      }
+      
+      // Try to map state to area
+      let area = STATE_TO_AREA_MAP[state];
+      
+      // If no state match, try searching in the formatted address
+      if (!area) {
+        const formattedAddress = result.formatted_address.toLowerCase();
+        for (const [key, value] of Object.entries(STATE_TO_AREA_MAP)) {
+          if (formattedAddress.includes(key)) {
+            area = value;
+            break;
+          }
         }
       }
       
       if (area) {
         return {
           area,
-          confidence: 'high', // Middleware uses Google Maps which is accurate
+          confidence: 'high', // Google Maps is more accurate
           location: {
-            name: result.formattedAddress || query,
+            name: result.formatted_address,
             state: state,
             country: 'Malaysia',
-            lat: result.lat,
-            lon: result.lon,
+            lat: result.geometry.location.lat,
+            lon: result.geometry.location.lng,
           },
           source: 'geocoding',
         };
       }
       
       // Even if we can't determine the area, return the coordinates
-      // The caller can still use these coordinates for nearby searches
       return {
         area: 'unknown',
         confidence: 'low',
         location: {
-          name: result.formattedAddress || query,
+          name: result.formatted_address,
+          state: state,
           country: 'Malaysia',
-          lat: result.lat,
-          lon: result.lon,
+          lat: result.geometry.location.lat,
+          lon: result.geometry.location.lng,
         },
         source: 'geocoding',
       };
     }
   } catch (error: any) {
-    console.error('Middleware geocoding error:', error.message);
+    console.error('Google Maps API error:', error.message);
     throw error;
   }
   
