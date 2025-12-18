@@ -331,7 +331,7 @@ ARRIVAL DATA:
 
   server.tool(
     'find_nearby_stops',
-    'Find bus or train stops near a specific location. You can provide EITHER coordinates (lat/lon) OR a location name - the middleware will geocode place names automatically.',
+    'Find bus or train stops near a specific location AND get all routes serving those stops. You can provide EITHER coordinates (lat/lon) OR a location name - the middleware will geocode place names automatically.',
     {
       area: z.coerce.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
       lat: z.coerce.number().optional().describe('Latitude coordinate (optional if location is provided)'),
@@ -364,7 +364,8 @@ ARRIVAL DATA:
           };
         }
         
-        const response = await axios.get(`${getMiddlewareUrl()}/api/stops/nearby`, createApiConfig(params));
+        // Use /api/stops/nearby/routes endpoint (not /api/stops/nearby which doesn't exist)
+        const response = await axios.get(`${getMiddlewareUrl()}/api/stops/nearby/routes`, createApiConfig(params));
         
         return {
           content: [
