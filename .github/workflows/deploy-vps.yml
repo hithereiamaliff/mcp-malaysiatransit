@@ -20,7 +20,7 @@ jobs:
           script: |
             cd /opt/mcp-servers/malaysiatransit
             git pull origin main
-            export GOOGLE_MAPS_API_KEY="${{ secrets.GOOGLE_MAPS_API_KEY }}"
+            echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" > .env
             docker compose down
             docker compose up -d --build
             echo "Deployment completed at $(date)"
