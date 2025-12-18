@@ -210,8 +210,19 @@ export async function detectAreaFromLocation(query: string): Promise<GeocodingRe
           source: matchSource,
         };
       }
-      // Otherwise use the geocoding result as-is
-      return geocodingResult;
+      // If geocoding returned an area (even 'unknown'), use the geocoded coordinates
+      // but try to use the geocoding result's area if it's valid
+      if (geocodingResult.area && geocodingResult.area !== 'unknown') {
+        return geocodingResult;
+      }
+      // Geocoding worked but couldn't determine area - still return with coordinates
+      // so AI can use find_nearby_stops_with_arrivals with the coordinates
+      return {
+        area: geocodingResult.area || 'unknown',
+        confidence: 'low',
+        location: geocodingResult.location,
+        source: 'geocoding',
+      };
     }
   } catch (error) {
     console.error('Geocoding error:', error);
@@ -230,7 +241,6 @@ export async function detectAreaFromLocation(query: string): Promise<GeocodingRe
         lon: 0,
       },
       source: matchSource,
-      // Add a hint for AI models
     };
   }
   
