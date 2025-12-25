@@ -22,5 +22,7 @@ jobs:
             git pull origin main
             echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" > .env
             docker compose down
-            docker compose up -d --build
+            docker compose build --no-cache
+            docker compose up -d
             echo "Deployment completed at $(date)"
+            docker logs mcp-malaysiatransit --tail 30
