@@ -1,5 +1,7 @@
 # Malaysia Transit MCP
 
+[![smithery badge](https://smithery.ai/badge/@hithereiamaliff/mcp-malaysiatransit)](https://smithery.ai/server/@hithereiamaliff/mcp-malaysiatransit)
+
 MCP (Model Context Protocol) server for Malaysia's public transit system, providing real-time bus and train information across 10+ cities in Malaysia.
 
 **MCP Endpoint:** `https://mcp.techmavie.digital/malaysiatransit/mcp`
