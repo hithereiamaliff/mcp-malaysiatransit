@@ -19,7 +19,7 @@ services:
       - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
     volumes:
       - analytics-data:/app/data
-      - credentials:/app/.credentials
+      - /opt/mcp-servers/.credentials:/app/.credentials:ro
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/health || exit 1"]
       interval: 30s
