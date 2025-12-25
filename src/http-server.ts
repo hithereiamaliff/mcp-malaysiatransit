@@ -1,8 +1,9 @@
 /**
- * Malaysia Transit MCP Server - Streamable HTTP Transport
+ * Malaysia Transit MCP Server - Streamable HTTP Transport with Firebase Analytics
  * 
  * This file provides an HTTP server for self-hosting the MCP server on a VPS.
  * It uses the Streamable HTTP transport for MCP communication.
+ * Analytics are stored in Firebase for persistence across restarts.
  * 
  * Usage:
  *   npm run build
@@ -15,6 +16,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import { FirebaseAnalytics, Analytics } from './firebase-analytics.js';
 import fs from 'fs';
 import path from 'path';
 import express, { Request, Response, NextFunction } from 'express';
@@ -35,6 +37,33 @@ const SAVE_INTERVAL_MS = 60000; // Save every 60 seconds
 process.env.MIDDLEWARE_URL = MIDDLEWARE_URL;
 
 // ============================================================================
+// Firebase Analytics Setup
+// ============================================================================
+const firebaseAnalytics = new FirebaseAnalytics('mcp-malaysiatransit');
+
+// Sanitize Firebase keys - replace invalid characters
+function sanitizeKey(key: string): string {
+  return key.replace(/[.#$/\[\]]/g, '_');
+}
+
+function sanitizeObject(obj: any): any {
+  if (typeof obj !== 'object' || obj === null) {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizeObject);
+  }
+
+  const sanitized: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const sanitizedKey = sanitizeKey(key);
+    sanitized[sanitizedKey] = sanitizeObject(value);
+  }
+  return sanitized;
+}
+
+// ============================================================================
 // Analytics Tracking
 // ============================================================================
 interface ToolCall {
@@ -42,19 +71,6 @@ interface ToolCall {
   timestamp: string;
   clientIp: string;
   userAgent: string;
-}
-
-interface Analytics {
-  serverStartTime: string;
-  totalRequests: number;
-  totalToolCalls: number;
-  requestsByMethod: Record<string, number>;
-  requestsByEndpoint: Record<string, number>;
-  toolCalls: Record<string, number>;
-  recentToolCalls: ToolCall[];
-  clientsByIp: Record<string, number>;
-  clientsByUserAgent: Record<string, number>;
-  hourlyRequests: Record<string, number>;
 }
 
 // Initialize with defaults, will be overwritten by loadAnalytics()
@@ -72,7 +88,7 @@ let analytics: Analytics = {
 };
 
 // ============================================================================
-// Analytics Persistence
+// Analytics Persistence - Dual Mode (Firebase + Local Backup)
 // ============================================================================
 function ensureDataDir(): void {
   if (!fs.existsSync(ANALYTICS_DATA_DIR)) {
@@ -81,24 +97,34 @@ function ensureDataDir(): void {
   }
 }
 
-function loadAnalytics(): void {
+async function loadAnalytics(): Promise<void> {
   try {
+    // Try Firebase first
+    if (firebaseAnalytics.isInitialized()) {
+      const firebaseData = await firebaseAnalytics.loadAnalytics();
+      if (firebaseData) {
+        analytics = firebaseData;
+        console.log('📊 Loaded analytics from Firebase ✅');
+        console.log(`   Total requests: ${analytics.totalRequests.toLocaleString()}, Tool calls: ${analytics.totalToolCalls}`);
+        return;
+      }
+    }
+
+    // Fallback to local file
     ensureDataDir();
     if (fs.existsSync(ANALYTICS_FILE)) {
       const data = fs.readFileSync(ANALYTICS_FILE, 'utf-8');
       const loaded = JSON.parse(data) as Analytics;
       
-      // Merge loaded data, keeping serverStartTime as the original start
       analytics = {
         ...loaded,
-        // Keep the original server start time from the file
         serverStartTime: loaded.serverStartTime || new Date().toISOString(),
       };
       
-      console.log(`📊 Loaded analytics from ${ANALYTICS_FILE}`);
-      console.log(`   Total requests: ${analytics.totalRequests}, Tool calls: ${analytics.totalToolCalls}`);
+      console.log(`📊 Loaded analytics from local file`);
+      console.log(`   Total requests: ${analytics.totalRequests.toLocaleString()}, Tool calls: ${analytics.totalToolCalls}`);
     } else {
-      console.log(`📊 No existing analytics file found, starting fresh`);
+      console.log(`📊 No existing analytics found, starting fresh`);
     }
   } catch (error) {
     console.error(`⚠️ Failed to load analytics:`, error);
@@ -106,18 +132,29 @@ function loadAnalytics(): void {
   }
 }
 
-function saveAnalytics(): void {
+async function saveAnalytics(): Promise<void> {
   try {
+    // Save to Firebase (primary)
+    if (firebaseAnalytics.isInitialized()) {
+      const sanitized = sanitizeObject(analytics);
+      await firebaseAnalytics.saveAnalytics(sanitized);
+    }
+
+    // Also save locally as backup
     ensureDataDir();
     fs.writeFileSync(ANALYTICS_FILE, JSON.stringify(analytics, null, 2));
-    console.log(`💾 Saved analytics to ${ANALYTICS_FILE}`);
+    
+    const storage = firebaseAnalytics.isInitialized() ? 'Firebase + local backup' : 'local file only';
+    console.log(`💾 Saved analytics to ${storage}`);
   } catch (error) {
     console.error(`⚠️ Failed to save analytics:`, error);
   }
 }
 
 // Load analytics on startup
-loadAnalytics();
+(async () => {
+  await loadAnalytics();
+})();
 
 // Periodic save
 const saveInterval = setInterval(() => {
@@ -207,6 +244,7 @@ mcpServer.tool(
             timestamp: new Date().toISOString(),
             middlewareUrl: MIDDLEWARE_URL,
             transport: 'streamable-http',
+            firebase: firebaseAnalytics.isInitialized() ? 'enabled' : 'disabled',
           }, null, 2),
         },
       ],
@@ -235,6 +273,7 @@ app.get('/health', (req: Request, res: Response) => {
     server: 'Malaysia Transit MCP',
     version: '2.1.0',
     transport: 'streamable-http',
+    firebase: firebaseAnalytics.isInitialized() ? 'connected' : 'disabled',
     middlewareUrl: MIDDLEWARE_URL,
     timestamp: new Date().toISOString(),
   });
@@ -266,6 +305,7 @@ app.get('/analytics', (req: Request, res: Response) => {
     server: 'Malaysia Transit MCP',
     uptime: getUptime(),
     serverStartTime: analytics.serverStartTime,
+    firebase: firebaseAnalytics.isInitialized() ? 'enabled' : 'disabled',
     summary: {
       totalRequests: analytics.totalRequests,
       totalToolCalls: analytics.totalToolCalls,
@@ -286,7 +326,7 @@ app.get('/analytics', (req: Request, res: Response) => {
 });
 
 // Analytics endpoint - import/restore stats from backup
-app.post('/analytics/import', (req: Request, res: Response) => {
+app.post('/analytics/import', async (req: Request, res: Response) => {
   const importKey = req.query.key;
   if (importKey !== process.env.ANALYTICS_IMPORT_KEY && importKey !== 'malaysia-transit-2024') {
     res.status(403).json({ error: 'Invalid import key' });
@@ -352,7 +392,7 @@ app.post('/analytics/import', (req: Request, res: Response) => {
     }
     
     // Save immediately after import
-    saveAnalytics();
+    await saveAnalytics();
     
     res.json({ 
       message: 'Analytics imported successfully',
@@ -392,6 +432,8 @@ app.get('/analytics/tools', (req: Request, res: Response) => {
 app.get('/analytics/dashboard', (req: Request, res: Response) => {
   trackRequest(req, '/analytics/dashboard');
   
+  const firebaseStatus = firebaseAnalytics.isInitialized();
+  
   const html = `
 <!DOCTYPE html>
 <html lang="en">
@@ -426,6 +468,17 @@ app.get('/analytics/dashboard', (req: Request, res: Response) => {
       margin-bottom: 8px;
     }
     header p { color: #a1a1aa; }
+    .firebase-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-top: 12px;
+      ${firebaseStatus 
+        ? 'background: linear-gradient(90deg, #f59e0b, #f97316); color: white;' 
+        : 'background: rgba(107, 114, 128, 0.3); color: #9ca3af;'}
+    }
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -527,6 +580,10 @@ app.get('/analytics/dashboard', (req: Request, res: Response) => {
       <h1>🚌 Malaysia Transit MCP Analytics</h1>
       <p>Real-time usage statistics for the MCP server</p>
       <span class="uptime-badge" id="uptime">Loading...</span>
+      <br>
+      <span class="firebase-badge">
+        ${firebaseStatus ? '🔥 Firebase Connected' : '💾 Local Storage Only'}
+      </span>
     </header>
     
     <div class="stats-grid">
@@ -775,7 +832,7 @@ app.get('/analytics/dashboard', (req: Request, res: Response) => {
 });
 
 // Analytics endpoint - reset (protected by query param)
-app.post('/analytics/reset', (req: Request, res: Response) => {
+app.post('/analytics/reset', async (req: Request, res: Response) => {
   const resetKey = req.query.key;
   if (resetKey !== process.env.ANALYTICS_RESET_KEY && resetKey !== 'malaysia-transit-2024') {
     res.status(403).json({ error: 'Invalid reset key' });
@@ -792,6 +849,8 @@ app.post('/analytics/reset', (req: Request, res: Response) => {
   analytics.clientsByUserAgent = {};
   analytics.hourlyRequests = {};
   analytics.serverStartTime = new Date().toISOString();
+  
+  await saveAnalytics();
   
   res.json({ message: 'Analytics reset successfully', timestamp: analytics.serverStartTime });
 });
@@ -839,6 +898,7 @@ app.get('/', (req: Request, res: Response) => {
     description: 'MCP server for Malaysia public transit information',
     icon: 'https://malaysiatransit.techmavie.digital/malaysiatransitlogo/Malaysia%20Transit%20Logo%20(Transparent).png',
     transport: 'streamable-http',
+    firebase: firebaseAnalytics.isInitialized() ? 'enabled' : 'disabled',
     endpoints: {
       mcp: '/mcp',
       health: '/health',
@@ -861,6 +921,7 @@ mcpServer.connect(transport)
       console.log(`📡 MCP endpoint: http://${HOST}:${PORT}/mcp`);
       console.log(`❤️  Health check: http://${HOST}:${PORT}/health`);
       console.log(`🔗 Middleware URL: ${MIDDLEWARE_URL}`);
+      console.log(`🔥 Firebase Analytics: ${firebaseAnalytics.isInitialized() ? 'Enabled ✅' : 'Disabled ⚠️'}`);
       console.log('='.repeat(60));
       console.log('');
       console.log('Test with MCP Inspector:');
@@ -875,10 +936,10 @@ mcpServer.connect(transport)
   });
 
 // Graceful shutdown with analytics save
-function gracefulShutdown(signal: string) {
+async function gracefulShutdown(signal: string) {
   console.log(`Received ${signal}, shutting down gracefully...`);
   clearInterval(saveInterval);
-  saveAnalytics();
+  await saveAnalytics();
   console.log('Analytics saved. Goodbye!');
   process.exit(0);
 }
