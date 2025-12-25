@@ -32,7 +32,7 @@ class FirebaseAnalytics {
       // Try to load service account from credentials directory
       const credentialPath = path.join(
         process.cwd(),
-        '../.credentials/firebase-service-account.json'
+        '.credentials/firebase-service-account.json'
       );
       
       if (!fs.existsSync(credentialPath)) {
