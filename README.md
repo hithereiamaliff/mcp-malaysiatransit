@@ -123,9 +123,19 @@ The MCP server uses environment variables for configuration:
 - **`MIDDLEWARE_URL`** (required): Malaysia Transit Middleware API URL
   - Default: `https://malaysiatransit.techmavie.digital`
 
+- **`INTERNAL_AUTH_TOKEN`** (required for production): Shared secret for middleware API authentication
+  - Must match `INTERNAL_APP_AUTH_TOKEN` in the middleware's environment
+  - Generate with: `openssl rand -hex 32`
+
 - **`GOOGLE_MAPS_API_KEY`** (optional): Google Maps API key for location detection
   - If not provided, falls back to Nominatim (free but less accurate)
   - Get your API key from [Google Cloud Console](https://console.cloud.google.com/)
+
+- **`ANALYTICS_RESET_KEY`** (optional): Admin key for `POST /analytics/reset`
+  - If not set, the reset endpoint is disabled (returns 403)
+
+- **`ANALYTICS_IMPORT_KEY`** (optional): Admin key for `POST /analytics/import`
+  - If not set, the import endpoint is disabled (returns 403)
 
 ### Development
 
@@ -239,12 +249,34 @@ const arrivals = await tools.get_stop_arrivals({
 ```
 
 #### `find_nearby_stops`
-Find stops near a location.
+Find nearby stops and the routes that serve them.
 
 **Parameters:**
 - `area` (string): Service area ID
-- `lat` (number): Latitude coordinate
-- `lon` (number): Longitude coordinate
+- `location` (string, optional): Place name to geocode (e.g., "KLCC", "Komtar")
+- `lat` (number, optional): Latitude coordinate (required if `location` not provided)
+- `lon` (number, optional): Longitude coordinate (required if `location` not provided)
+- `radius` (number, optional): Search radius in meters (default: 500)
+
+#### `find_nearby_stops_with_arrivals` ⭐
+Find nearby stops and get real-time arrivals in one call.
+
+**Parameters:**
+- `area` (string): Service area ID
+- `location` (string, optional): Place name to geocode
+- `lat` (number, optional): Latitude coordinate (required if `location` not provided)
+- `lon` (number, optional): Longitude coordinate (required if `location` not provided)
+- `radius` (number, optional): Search radius in meters (default: 500)
+- `routeFilter` (string, optional): Filter arrivals by route number (e.g., "302", "101")
+
+#### `find_nearby_stops_with_routes`
+Find nearby stops and get all routes serving those stops in one call.
+
+**Parameters:**
+- `area` (string): Service area ID
+- `location` (string, optional): Place name to geocode
+- `lat` (number, optional): Latitude coordinate (required if `location` not provided)
+- `lon` (number, optional): Longitude coordinate (required if `location` not provided)
 - `radius` (number, optional): Search radius in meters (default: 500)
 
 ### Route Information
@@ -254,6 +286,13 @@ List all routes in an area.
 
 **Parameters:**
 - `area` (string): Service area ID
+
+#### `get_route_stops`
+Get all stops served by a specific route.
+
+**Parameters:**
+- `area` (string): Service area ID
+- `routeId` (string): Route ID from `list_routes`
 
 #### `get_route_details`
 Get detailed route information.
@@ -479,17 +518,35 @@ Find KTM stations near a specific location.
 
 ### Penang Ferry Tools (NEW)
 
-#### `get_penang_ferry_info` ⭐
-Get Penang Ferry fare information, schedule, terminals, and payment methods.
+#### `get_penang_ferry_overview` ⭐
+Get Penang Ferry service overview including route, operator, and general info.
 
 **Parameters:** None
 
-**Returns:** Ferry fare, operating hours, terminal locations, and payment options.
+#### `get_penang_ferry_schedule`
+Get the full Penang Ferry schedule with operating hours and frequency.
+
+**Parameters:** None
+
+#### `get_penang_ferry_next_departure`
+Get the next upcoming Penang Ferry departures from both terminals.
+
+**Parameters:** None
+
+#### `get_penang_ferry_terminals`
+Get Penang Ferry terminal information including locations and facilities.
+
+**Parameters:** None
+
+#### `get_penang_ferry_fare`
+Get Penang Ferry fare information and payment methods.
+
+**Parameters:** None
 
 **Example:**
 ```typescript
-const ferry = await tools.get_penang_ferry_info();
-// Returns: { fare: { adult: "1.40", ... }, schedule: { ... }, terminals: [...] }
+const fare = await tools.get_penang_ferry_fare();
+// Returns: { adult: "1.40", child: "0.70", ... }
 ```
 
 ### System Tools
@@ -804,6 +861,10 @@ To set up auto-deployment, add these secrets to your GitHub repository:
 - `VPS_USERNAME` - SSH username (e.g., `root`)
 - `VPS_PORT` - SSH port (e.g., `22`)
 - `VPS_SSH_KEY` - Private SSH key for authentication
+- `GOOGLE_MAPS_API_KEY` - Google Maps API key for geocoding
+- `INTERNAL_AUTH_TOKEN` - Shared auth token (must match middleware's `INTERNAL_APP_AUTH_TOKEN`)
+- `ANALYTICS_RESET_KEY` (optional) - Enables `/analytics/reset` admin endpoint
+- `ANALYTICS_IMPORT_KEY` (optional) - Enables `/analytics/import` admin endpoint
 
 ## Troubleshooting
 
@@ -814,7 +875,8 @@ If you can't connect to the middleware:
 1. Verify your `MIDDLEWARE_URL` is correct
 2. Ensure the middleware is running and accessible
 3. Check network connectivity
-4. Test middleware directly: `curl https://your-middleware-url/api/areas`
+4. Verify `INTERNAL_AUTH_TOKEN` matches middleware `INTERNAL_APP_AUTH_TOKEN` (if middleware auth is enabled)
+5. Test middleware directly: `curl https://your-middleware-url/api/areas`
 
 ### No Data Returned
 
