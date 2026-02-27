@@ -17,6 +17,7 @@ services:
       - NODE_ENV=production
       - ANALYTICS_DATA_DIR=/app/data
       - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+      - INTERNAL_AUTH_TOKEN=${INTERNAL_AUTH_TOKEN}
     volumes:
       - analytics-data:/app/data
       - /opt/mcp-servers/.credentials:/app/.credentials:ro

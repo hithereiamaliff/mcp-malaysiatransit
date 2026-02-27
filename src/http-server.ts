@@ -328,7 +328,7 @@ app.get('/analytics', (req: Request, res: Response) => {
 // Analytics endpoint - import/restore stats from backup
 app.post('/analytics/import', async (req: Request, res: Response) => {
   const importKey = req.query.key;
-  if (importKey !== process.env.ANALYTICS_IMPORT_KEY && importKey !== 'malaysia-transit-2024') {
+  if (!process.env.ANALYTICS_IMPORT_KEY || importKey !== process.env.ANALYTICS_IMPORT_KEY) {
     res.status(403).json({ error: 'Invalid import key' });
     return;
   }
@@ -808,13 +808,18 @@ app.get('/analytics/dashboard', (req: Request, res: Response) => {
         return;
       }
       
+      function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+      }
       container.innerHTML = calls.slice(0, 20).map(call => \`
         <div class="call-item">
           <div>
-            <span class="call-tool">\${call.tool}</span>
-            <div class="call-client">\${call.userAgent}</div>
+            <span class="call-tool">\${escapeHtml(call.tool)}</span>
+            <div class="call-client">\${escapeHtml(call.userAgent)}</div>
           </div>
-          <span class="call-time">\${new Date(call.timestamp).toLocaleTimeString()}</span>
+          <span class="call-time">\${escapeHtml(new Date(call.timestamp).toLocaleTimeString())}</span>
         </div>
       \`).join('');
     }
@@ -834,7 +839,7 @@ app.get('/analytics/dashboard', (req: Request, res: Response) => {
 // Analytics endpoint - reset (protected by query param)
 app.post('/analytics/reset', async (req: Request, res: Response) => {
   const resetKey = req.query.key;
-  if (resetKey !== process.env.ANALYTICS_RESET_KEY && resetKey !== 'malaysia-transit-2024') {
+  if (!process.env.ANALYTICS_RESET_KEY || resetKey !== process.env.ANALYTICS_RESET_KEY) {
     res.status(403).json({ error: 'Invalid reset key' });
     return;
   }

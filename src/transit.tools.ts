@@ -10,8 +10,18 @@ import { detectAreaFromLocation, getAreaStateMapping } from './geocoding.utils.j
 
 // MCP Client Identification Header
 // This identifies requests from Malaysia Transit MCP to the middleware analytics
-const MCP_CLIENT_HEADERS = {
-  'X-App-Name': 'Malaysia-Transit-MCP',
+// X-Internal-Auth is used to bypass API key auth on the middleware (must match INTERNAL_APP_AUTH_TOKEN)
+const getMcpClientHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = {
+    'X-App-Name': 'Malaysia-Transit-MCP',
+  };
+
+  const internalAuthToken = process.env.INTERNAL_AUTH_TOKEN;
+  if (internalAuthToken) {
+    headers['X-Internal-Auth'] = internalAuthToken;
+  }
+
+  return headers;
 };
 
 // Get middleware URL from environment
@@ -22,8 +32,9 @@ const getMiddlewareUrl = (): string => {
 // Create axios instance with MCP client identification
 const createApiConfig = (params?: Record<string, any>): AxiosRequestConfig => {
   return {
-    headers: MCP_CLIENT_HEADERS,
+    headers: getMcpClientHeaders(),
     params,
+    timeout: 15000, // 15 second timeout to prevent hanging requests
   };
 };
 
@@ -751,9 +762,6 @@ ARRIVAL DATA:
   // SCHEDULE TOOLS (NEW)
   // ============================================================================
 
-  // Areas that support schedule data
-  const SCHEDULE_SUPPORTED_AREAS = ['penang', 'ipoh', 'seremban', 'kangar', 'alor-setar', 'kota-bharu', 'kuala-terengganu', 'melaka', 'johor', 'kuching'];
-  
 
   server.tool(
     'get_route_departures',

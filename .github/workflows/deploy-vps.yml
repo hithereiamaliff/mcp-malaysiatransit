@@ -21,6 +21,7 @@ jobs:
             cd /opt/mcp-servers/malaysiatransit
             git pull origin main
             echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" > .env
+            echo "INTERNAL_AUTH_TOKEN=${{ secrets.INTERNAL_AUTH_TOKEN }}" >> .env
             docker compose down
             docker compose build --no-cache
             docker compose up -d

@@ -2,15 +2,13 @@
   "name": "mcp-malaysiatransit",
   "version": "2.1.0",
   "description": "Malaysia Transit MCP Server - Real-time bus and train information across Malaysia",
-  "main": "./src/index.ts",
-  "module": "./src/index.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "type": "module",
   "files": [
     "dist/**/*",
     "README.md",
-    "LICENSE",
-    "TOOLS.md",
-    "PROMPT.md"
+    "LICENSE"
   ],
   "scripts": {
     "start": "node index.js",

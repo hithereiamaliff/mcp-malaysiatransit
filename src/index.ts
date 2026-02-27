@@ -38,8 +38,12 @@ dotenv.config();
  *     - 'get_ktm_schedules' - Get full KTM schedule data
  *     - 'find_nearby_ktm_stations' - Find KTM stations near a location
  * 
- * 11. NEW FERRY TOOL:
- *     - 'get_penang_ferry_info' - Get Penang Ferry fare, schedule, and terminals
+ * 11. FERRY TOOLS:
+ *     - 'get_penang_ferry_overview' - Penang Ferry service overview
+ *     - 'get_penang_ferry_schedule' - Full ferry schedule
+ *     - 'get_penang_ferry_next_departure' - Next departures
+ *     - 'get_penang_ferry_terminals' - Terminal information
+ *     - 'get_penang_ferry_fare' - Fare information
  * 
  * 12. All tools require an 'area' parameter (e.g., 'penang', 'klang-valley', 'ipoh')
  *     Exception: KTM and Ferry tools don't require area parameter
@@ -68,7 +72,7 @@ export default function createStatelessServer({
 }) {
   const server = new McpServer({
     name: 'Malaysia Transit MCP Server',
-    version: '1.0.0',
+    version: '2.1.0',
   });
 
   // All configuration via environment variables
