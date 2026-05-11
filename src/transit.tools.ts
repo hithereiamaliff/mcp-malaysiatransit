@@ -536,7 +536,7 @@ ARRIVAL DATA:
 
   server.tool(
     'list_routes',
-    'List all available bus or train routes in a specific area',
+    'List all available bus or train routes in a specific area. For area=johor, the list merges BAS.MY routes with all 41 Bas Muafakat Johor (BMJ) routes — BMJ route IDs are prefixed BMJ_<code> but route_short_name continues to work in downstream calls.',
     {
       area: z.coerce.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
     },
@@ -765,7 +765,7 @@ ARRIVAL DATA:
 
   server.tool(
     'get_route_departures',
-    'Get the next N departures for a specific route (both directions). Useful for showing upcoming bus/train times. IMPORTANT: Use route_short_name (e.g., "K10", "A32", "R10", "101") NOT the numeric route_id. Works for: penang, ipoh, seremban, kangar, alor-setar, kota-bharu, kuala-terengganu, melaka, johor, kuching.',
+    'Get the next N departures for a specific route (both directions). Useful for showing upcoming bus/train times. IMPORTANT: Use route_short_name (e.g., "K10", "A32", "R10", "101") NOT the numeric route_id. Works for: klang-valley, penang, ipoh, seremban, kangar, alor-setar, kota-bharu, kuala-terengganu, melaka, johor, kuching (klang-valley uses Prasarana GTFS schedules; johor includes Bas Muafakat Johor (BMJ) routes alongside BAS.MY).',
     {
       area: z.coerce.string().describe('Service area ID (e.g., "penang", "ipoh", "seremban", "alor-setar")'),
       routeId: z.coerce.string().describe('Route SHORT NAME (e.g., "101", "K10", "A32") - NOT the numeric route_id. Get this from list_routes route_short_name field.'),
@@ -802,7 +802,7 @@ ARRIVAL DATA:
 
   server.tool(
     'get_next_departure',
-    'Get the single next departure for a route in a specific direction. Quick way to find when the next bus/train leaves. IMPORTANT: Use route_short_name (e.g., "101", "K10", "A32") NOT numeric route_id. Works for: penang, ipoh, seremban, kangar, alor-setar, kota-bharu, kuala-terengganu, melaka, johor, kuching.',
+    'Get the single next departure for a route in a specific direction. Quick way to find when the next bus/train leaves. IMPORTANT: Use route_short_name (e.g., "101", "K10", "A32") NOT numeric route_id. Works for: penang, ipoh, seremban, kangar, alor-setar, kota-bharu, kuala-terengganu, melaka, johor, kuching (johor includes Bas Muafakat Johor (BMJ) routes alongside BAS.MY; klang-valley is NOT supported by this endpoint — it relies on the markdown schedule parser which has no klang-valley data).',
     {
       area: z.coerce.string().describe('Service area ID (e.g., "penang", "ipoh", "seremban", "alor-setar")'),
       routeId: z.coerce.string().describe('Route SHORT NAME (e.g., "101", "K10", "A32") - NOT numeric route_id'),
@@ -844,7 +844,7 @@ ARRIVAL DATA:
 
   server.tool(
     'get_stop_routes',
-    'Get all routes serving a specific stop with their next departures. Shows which buses/trains stop here and when. Works for: penang, ipoh, seremban, kangar, alor-setar, kota-bharu, kuala-terengganu, melaka, johor, kuching.',
+    'Get all routes serving a specific stop with their next departures. Shows which buses/trains stop here and when. Works for: klang-valley, penang, ipoh, seremban, kangar, alor-setar, kota-bharu, kuala-terengganu, melaka, johor, kuching (klang-valley uses Prasarana GTFS schedules; johor includes Bas Muafakat Johor (BMJ) routes alongside BAS.MY).',
     {
       area: z.coerce.string().describe('Service area ID (e.g., "penang", "ipoh", "seremban", "alor-setar")'),
       stopId: z.coerce.string().describe('Stop ID from search_stops'),
@@ -881,7 +881,7 @@ ARRIVAL DATA:
 
   server.tool(
     'get_route_schedule',
-    'Get the complete daily schedule for a route. Shows all departure times throughout the day. IMPORTANT: Use route_short_name (e.g., "101", "K10", "A32") NOT numeric route_id. Works for: penang, ipoh, seremban, kangar, alor-setar, kota-bharu, kuala-terengganu, melaka, johor, kuching.',
+    'Get the complete daily schedule for a route. Shows all departure times throughout the day. IMPORTANT: Use route_short_name (e.g., "101", "K10", "A32") NOT numeric route_id. Works for: penang, ipoh, seremban, kangar, alor-setar, kota-bharu, kuala-terengganu, melaka, johor, kuching (johor includes Bas Muafakat Johor (BMJ) routes alongside BAS.MY; klang-valley is NOT supported by this endpoint — it relies on the markdown schedule parser which has no klang-valley data).',
     {
       area: z.coerce.string().describe('Service area ID (e.g., "penang", "ipoh", "seremban", "alor-setar")'),
       routeId: z.coerce.string().describe('Route SHORT NAME (e.g., "101", "K10", "A32") - NOT numeric route_id'),
@@ -917,7 +917,7 @@ ARRIVAL DATA:
 
   server.tool(
     'get_route_origin',
-    'Get the origin stop name for a route in a specific direction. Useful for showing where the bus/train starts. IMPORTANT: Use route_short_name (e.g., "101", "K10", "A32") NOT numeric route_id. Works for: penang, ipoh, seremban, kangar, alor-setar, kota-bharu, kuala-terengganu, melaka, johor, kuching.',
+    'Get the origin stop name for a route in a specific direction. Useful for showing where the bus/train starts. IMPORTANT: Use route_short_name (e.g., "101", "K10", "A32") NOT numeric route_id. Works for: penang, ipoh, seremban, kangar, alor-setar, kota-bharu, kuala-terengganu, melaka, johor, kuching (johor includes Bas Muafakat Johor (BMJ) routes alongside BAS.MY; klang-valley is NOT supported by this endpoint — it relies on the markdown schedule parser which has no klang-valley data).',
     {
       area: z.coerce.string().describe('Service area ID (e.g., "penang", "ipoh", "seremban", "alor-setar")'),
       routeId: z.coerce.string().describe('Route SHORT NAME (e.g., "101", "K10", "A32") - NOT numeric route_id'),
@@ -959,7 +959,7 @@ ARRIVAL DATA:
 
   server.tool(
     'get_route_status',
-    'Check if a route is currently operating based on its schedule. Shows if buses/trains are running now. IMPORTANT: Use route_short_name (e.g., "101", "K10", "A32") NOT numeric route_id. Works for: penang, ipoh, seremban, kangar, alor-setar, kota-bharu, kuala-terengganu, melaka, johor, kuching.',
+    'Check if a route is currently operating based on its schedule. Shows if buses/trains are running now. IMPORTANT: Use route_short_name (e.g., "101", "K10", "A32") NOT numeric route_id. Works for: penang, ipoh, seremban, kangar, alor-setar, kota-bharu, kuala-terengganu, melaka, johor, kuching (johor includes Bas Muafakat Johor (BMJ) routes alongside BAS.MY; klang-valley is NOT supported by this endpoint — it relies on the markdown schedule parser which has no klang-valley data).',
     {
       area: z.coerce.string().describe('Service area ID (e.g., "penang", "ipoh", "seremban", "alor-setar")'),
       routeId: z.coerce.string().describe('Route SHORT NAME (e.g., "101", "K10", "A32") - NOT numeric route_id'),
@@ -999,7 +999,7 @@ ARRIVAL DATA:
 
   server.tool(
     'get_fare_routes',
-    'Get all routes available for fare calculation in a specific area. MUST call this FIRST before calculate_fare to get valid route_id values. Supports: ipoh, seremban, kangar, alor-setar, kota-bharu, kuala-terengganu, melaka, johor, kuching, penang.',
+    'Get all routes available for fare calculation in a specific area. MUST call this FIRST before calculate_fare to get valid route_id values. Supports: ipoh, seremban, kangar, alor-setar, kota-bharu, kuala-terengganu, melaka, johor, kuching (all BAS.MY distance-based), and penang (Rapid Penang staged + free CAT routes that return RM 0). Klang Valley is not supported here — Rapid KL fares are not in this calculator.',
     {
       area: z.coerce.string().describe('Service area ID - must be: ipoh, seremban, kangar, alor-setar, kota-bharu, kuala-terengganu, melaka, johor, kuching, or penang'),
     },
@@ -1070,7 +1070,7 @@ ARRIVAL DATA:
 
   server.tool(
     'calculate_fare',
-    'Calculate the bus fare between two stops on a route. IMPORTANT: You MUST first call get_fare_routes to get route_id, then get_route_stops_for_fare to get valid stop_id values. Do NOT guess IDs.',
+    'Calculate the bus fare between two stops on a route. IMPORTANT: You MUST first call get_fare_routes to get route_id, then get_route_stops_for_fare to get valid stop_id values. Do NOT guess IDs. Penang free CAT routes (CAT, CT13, C13A/B/C, CT14, CT15) short-circuit to RM 0. KTM Komuter Utara and Penang Ferry have their own dedicated tools (calculate_ktm_komuter_fare, get_penang_ferry_fare).',
     {
       area: z.coerce.string().describe('Service area ID - same as used in previous calls'),
       routeId: z.coerce.string().describe('The exact route_id from get_fare_routes (NOT route_short_name)'),
@@ -1121,7 +1121,7 @@ FARE DETAILS:
 
   server.tool(
     'calculate_journey_fare',
-    'Calculate the total fare for a multi-leg journey with bus transfers. Each leg is a separate fare since BAS.MY does not have integrated transfers.',
+    'Calculate the total fare for a multi-leg bus journey via /api/fare/:areaId/calculate-journey. Per-leg fares are computed from BAS.MY distance tables and Rapid Penang staged fares only. There are no integrated transfers across providers in Malaysia, so the total is just the sum of leg fares. IMPORTANT: this endpoint does NOT apply KTM Komuter Utara matrix, Penang Ferry flat rate, Causeway Link AA1 fixed fare, or free CAT short-circuits. For journeys involving those modes, compute the per-leg fares separately using calculate_ktm_komuter_fare / get_penang_ferry_fare / etc., and sum them manually. For Klang Valley, Rapid KL fares are not in this calculator.',
     {
       area: z.coerce.string().describe('Base service area ID (legs can specify different areas for inter-area journeys)'),
       legs: z.array(z.object({
@@ -1795,7 +1795,7 @@ JOURNEY FARE DETAILS:
     async ({ area }) => {
       try {
         const response = await axios.get(`${getMiddlewareUrl()}/api/analytics/areas/${area}`, createApiConfig());
-        
+
         return {
           content: [
             {
@@ -1815,6 +1815,239 @@ JOURNEY FARE DETAILS:
               }, null, 2),
             },
           ],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // ============================================================================
+  // JOURNEY PLANNER TOOLS (BETA)
+  // ============================================================================
+
+  server.tool(
+    'plan_journey',
+    'Plan a multi-modal public transport journey from origin to destination across Malaysia. RECOMMENDED for "How do I get from A to B?" style questions. The middleware composes bus + rail + ferry + walking legs using Google Directions in transit mode, then computes per-leg fares locally from the BAS.MY/Penang/KTM Komuter/Penang Ferry fare tables (with free CAT routes returning RM 0 and the Causeway Link AA1 at RM 8.00). Accepts either coordinates or a place name for origin and destination. Sorting, result count, and polyline inclusion are middleware-controlled — there is no way to override them from this tool yet. BETA: ETAs are scheduled (use get_stop_arrivals for live ETA at the boarding stop); fares may be missing for some legs (hasMissingFare flag). When the API returns errors like "unsupported-inter-area" or "area-out-of-coverage", surface the message directly to the user instead of retrying.',
+    {
+      originText: z.coerce.string().optional().describe('Origin as a place name (e.g., "Komtar", "Penang Airport", "KL Sentral"). Use this OR originLat+originLng.'),
+      originLat: z.coerce.number().optional().describe('Origin latitude (use with originLng if you already have coordinates).'),
+      originLng: z.coerce.number().optional().describe('Origin longitude (use with originLat).'),
+      destinationText: z.coerce.string().optional().describe('Destination as a place name. Use this OR destinationLat+destinationLng.'),
+      destinationLat: z.coerce.number().optional().describe('Destination latitude.'),
+      destinationLng: z.coerce.number().optional().describe('Destination longitude.'),
+      modeBus: z.coerce.boolean().optional().describe('Include bus legs in results (default true).'),
+      modeRail: z.coerce.boolean().optional().describe('Include rail legs in results (default true).'),
+      modeFerry: z.coerce.boolean().optional().describe('Include ferry legs in results (default true).'),
+      language: z.coerce.string().optional().describe('Language hint for any localised content (e.g., "en", "ms", "th").'),
+    },
+    async ({
+      originText, originLat, originLng,
+      destinationText, destinationLat, destinationLng,
+      modeBus, modeRail, modeFerry,
+      language,
+    }) => {
+      const buildLocation = (text?: string, lat?: number, lng?: number) => {
+        if (text) return { text };
+        if (lat !== undefined && lng !== undefined) return { lat, lng };
+        return null;
+      };
+
+      const origin = buildLocation(originText, originLat, originLng);
+      const destination = buildLocation(destinationText, destinationLat, destinationLng);
+
+      if (!origin || !destination) {
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              error: 'missing-endpoints',
+              message: 'Both origin and destination are required. Provide either *Text or *Lat/*Lng for each.',
+            }, null, 2),
+          }],
+          isError: true,
+        };
+      }
+
+      const options: Record<string, any> = {};
+      if (language) options.language = language;
+      if (modeBus !== undefined || modeRail !== undefined || modeFerry !== undefined) {
+        options.modes = {
+          ...(modeBus !== undefined ? { bus: modeBus } : {}),
+          ...(modeRail !== undefined ? { rail: modeRail } : {}),
+          ...(modeFerry !== undefined ? { ferry: modeFerry } : {}),
+        };
+      }
+
+      try {
+        const response = await axios.post(
+          `${getMiddlewareUrl()}/api/journey/plan`,
+          { origin, destination, options },
+          { headers: { ...getMcpClientHeaders(), 'Content-Type': 'application/json' }, timeout: 30000 },
+        );
+
+        return {
+          content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }],
+        };
+      } catch (error: any) {
+        const status = error.response?.status;
+        const payload = error.response?.data;
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              error: payload?.error || 'plan-journey-failed',
+              message: payload?.message || error.message,
+              httpStatus: status,
+              supportedCorridors: payload?.supportedCorridors,
+              note: status === 429
+                ? 'Rate limit hit on the journey planner. Wait a few seconds before retrying.'
+                : status === 503
+                  ? 'Routing engine temporarily unavailable. Try again shortly.'
+                  : undefined,
+            }, null, 2),
+          }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'get_journey_areas',
+    'Get the list of service areas supported by the journey planner along with the engine name and walking/transit limits. Useful for surfacing the planner\'s coverage area to the user before calling plan_journey.',
+    {},
+    async () => {
+      try {
+        const response = await axios.get(`${getMiddlewareUrl()}/api/journey/areas`, createApiConfig());
+        return {
+          content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }],
+        };
+      } catch (error: any) {
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({ error: 'Failed to fetch journey areas', message: error.message }, null, 2),
+          }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'places_autocomplete',
+    'Server-side Google Places autocomplete proxy for Malaysian place names. Returns ranked suggestions including transit-aware overrides (e.g. airports snap to the canonical bus stop). Use this when the user gives an ambiguous place name and you want to disambiguate before calling plan_journey. Pair the returned placeId with place_details to resolve to coordinates.',
+    {
+      input: z.coerce.string().min(2).max(120).describe('Search input (2 to 120 chars).'),
+      sessiontoken: z.coerce.string().optional().describe('Google Places session token (8-100 chars, A-Z a-z 0-9 _ -). Reuse the same token across autocomplete + details calls for billing.'),
+      language: z.coerce.string().optional().describe('Result language hint, e.g., "en", "ms", "th".'),
+    },
+    async ({ input, sessiontoken, language }) => {
+      try {
+        const params: Record<string, any> = { input };
+        if (sessiontoken) params.sessiontoken = sessiontoken;
+        if (language) params.language = language;
+        const response = await axios.get(`${getMiddlewareUrl()}/api/journey/places/autocomplete`, createApiConfig(params));
+        return {
+          content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }],
+        };
+      } catch (error: any) {
+        const payload = error.response?.data;
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              error: payload?.error || 'places-autocomplete-failed',
+              message: payload?.message || error.message,
+            }, null, 2),
+          }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'place_details',
+    'Resolve a placeId returned by places_autocomplete into coordinates and a formatted address. Override placeIds (transit-aware airport entries) resolve locally without round-tripping to Google.',
+    {
+      placeId: z.coerce.string().min(1).max(256).describe('placeId from places_autocomplete (Google place_id or override:* synthetic ID).'),
+      sessiontoken: z.coerce.string().optional().describe('Same session token used in places_autocomplete for billing.'),
+      language: z.coerce.string().optional().describe('Language hint, e.g., "en", "ms", "th".'),
+    },
+    async ({ placeId, sessiontoken, language }) => {
+      try {
+        const params: Record<string, any> = { placeId };
+        if (sessiontoken) params.sessiontoken = sessiontoken;
+        if (language) params.language = language;
+        const response = await axios.get(`${getMiddlewareUrl()}/api/journey/places/details`, createApiConfig(params));
+        return {
+          content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }],
+        };
+      } catch (error: any) {
+        const payload = error.response?.data;
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              error: payload?.error || 'place-details-failed',
+              message: payload?.message || error.message,
+            }, null, 2),
+          }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // ============================================================================
+  // FARE METADATA TOOLS
+  // ============================================================================
+
+  server.tool(
+    'get_fare_structures',
+    'Get the fare structure definitions used by the middleware. Returns BAS.MY distance-based pricing (baseFare, baseDistance, perKmRate, concessionDiscount), Rapid Penang staged zones (each with maxKm + adult/concession fare), and the list of free Penang CAT routes (CAT, CT13, C13A/B/C, CT14, CT15). Useful for showing users how a fare is computed before calling calculate_fare.',
+    {},
+    async () => {
+      try {
+        const response = await axios.get(`${getMiddlewareUrl()}/api/fare/structures`, createApiConfig());
+        return {
+          content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }],
+        };
+      } catch (error: any) {
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({ error: 'Failed to fetch fare structures', message: error.message }, null, 2),
+          }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'get_ktm_intercity_fare',
+    'Look up KTM Intercity (SH and ERT routes: Tumpat - Gemas - JB Sentral) fare. NOTE: This endpoint currently returns HTTP 501 because Intercity fare data is not yet integrated. The response includes pointers to related endpoints (stations, schedules, departures, nearby) and a link to the official KTMB website for fare lookups. Call this tool to surface the gap honestly to the user rather than guessing a fare.',
+    {},
+    async () => {
+      try {
+        const response = await axios.get(`${getMiddlewareUrl()}/api/ktm/intercity/fare`, createApiConfig());
+        return {
+          content: [{ type: 'text', text: JSON.stringify(response.data, null, 2) }],
+        };
+      } catch (error: any) {
+        // 501 is the expected response — return its body as a non-error so agents can read the alternativeSource and availableEndpoints fields
+        if (error.response?.status === 501 && error.response.data) {
+          return {
+            content: [{ type: 'text', text: JSON.stringify(error.response.data, null, 2) }],
+          };
+        }
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({ error: 'Failed to fetch KTM Intercity fare info', message: error.message }, null, 2),
+          }],
           isError: true,
         };
       }

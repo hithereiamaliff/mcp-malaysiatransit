@@ -33,7 +33,8 @@ MCP (Model Context Protocol) server for Malaysia's public transit system, provid
   - Kangar (BAS.MY Kangar, KTM Komuter Utara)
   - Alor Setar (BAS.MY Alor Setar, KTM Komuter Utara)
   - Kota Bharu (BAS.MY Kota Bharu, KTM Intercity)
-  - Kuala Terengganu, Melaka, Johor, Kuching (BAS.MY only)
+  - Kuala Terengganu, Melaka, Kuching (BAS.MY only)
+  - Johor (BAS.MY Johor Bahru + Bas Muafakat Johor — 41 BMJ routes via PAJ adapter)
   - Kuantan (Under Maintenance)
   - Kota Kinabalu (Coming Soon)
 - **Real-time Vehicle Tracking** - Live positions of buses and trains
@@ -52,6 +53,9 @@ MCP (Model Context Protocol) server for Malaysia's public transit system, provid
 - **🆕 Analytics Dashboard** - Visual dashboard with charts for MCP server usage monitoring
 - **🆕 Client Identification** - MCP identifies itself to middleware for analytics tracking
 - **🆕 Auto-Deployment** - GitHub Actions workflow for automatic VPS deployment
+- **🆕 Multi-Modal Journey Planner (Beta)** - `plan_journey` composes bus + rail + ferry + walking legs across Malaysia (Google Directions engine, locally-computed per-leg fares, AA1 cross-border, free CAT routes)
+- **🆕 Server-side Places Autocomplete** - `places_autocomplete` + `place_details` for resolving Malaysian place names with transit-aware airport overrides
+- **🆕 Fare Metadata** - `get_fare_structures` exposes BAS.MY / Penang / free CAT models so agents can explain how a fare is computed
 
 ## Architecture
 
@@ -594,6 +598,69 @@ Get detailed API usage analytics for a specific service area.
 const penangStats = await tools.get_area_analytics({ area: "penang" });
 ```
 
+### Journey Planner (NEW, BETA)
+
+#### `plan_journey` ⭐
+Plan a multi-modal public transport journey across Malaysia. Composes bus, rail, ferry, and walking legs via Google Directions in transit mode, then computes per-leg fares locally.
+
+**Parameters:**
+- `originText` (string, optional): Place name (e.g., "Komtar", "Penang Airport", "KL Sentral")
+- `originLat` / `originLng` (number, optional): Coordinates (use either text OR lat+lng)
+- `destinationText` / `destinationLat` / `destinationLng`: same shape as origin
+- `modeBus` / `modeRail` / `modeFerry` (boolean, optional): Filter transport modes
+- `language` (string, optional): `en`, `ms`, `th`
+
+**Returns:** Array of journey alternatives, each with `summary` (duration, walking distance, transfer count, fare estimate with `hasMissingFare` flag), `legs[]` (mode, route, from/to stops, times, per-leg fare), and `walkOnly` flag.
+
+**Errors:** `invalid-origin` (400), `invalid-destination` (400), `invalid-modes` (400), `unsupported-inter-area` (400), `area-out-of-coverage` (400), `engine-unavailable` (503), `routing-failed` (503). Surface these messages to the user directly; do not retry recursively.
+
+**Example:**
+```typescript
+const plan = await tools.plan_journey({
+  originText: "Penang Airport",
+  destinationText: "Komtar",
+});
+```
+
+**Beta caveats:** ETAs are scheduled times (use `get_stop_arrivals` for live ETA at boarding stops). Fares may be missing for some legs (`hasMissingFare: true`).
+
+#### `get_journey_areas`
+List service areas supported by the journey planner, plus engine name and walking/transit config.
+
+**Parameters:** None
+
+#### `places_autocomplete`
+Server-side Google Places autocomplete proxy for Malaysian place names. Returns ranked suggestions including transit-aware overrides (airports snap to canonical bus stops).
+
+**Parameters:**
+- `input` (string, 2-120 chars): Search input
+- `sessiontoken` (string, optional): Reuse the same token across autocomplete + details calls for Google Places billing
+- `language` (string, optional): `en`, `ms`, `th`
+
+**Use case:** When the user gives an ambiguous place name and you want them to disambiguate before calling `plan_journey`.
+
+#### `place_details`
+Resolve a `placeId` from `places_autocomplete` into coordinates and a formatted address.
+
+**Parameters:**
+- `placeId` (string): From `places_autocomplete` (Google place_id or `override:*` synthetic ID)
+- `sessiontoken` (string, optional): Same session token used in autocomplete
+- `language` (string, optional)
+
+### Fare Metadata (NEW)
+
+#### `get_fare_structures`
+Get the fare structure definitions used by the middleware. Returns BAS.MY distance-based pricing, Rapid Penang staged zones, and free Penang CAT routes (CAT, CT13, C13A/B/C, CT14, CT15).
+
+**Parameters:** None
+
+**Use case:** Explain to a user *how* a fare is computed before calling `calculate_fare`.
+
+#### `get_ktm_intercity_fare`
+Look up KTM Intercity (SH and ERT routes) fare. **NOTE:** Currently returns HTTP 501 because Intercity fare data is not yet integrated. The response includes pointers to related endpoints and a link to the official KTMB website. Call this tool to surface the gap honestly to the user rather than guessing a fare.
+
+**Parameters:** None
+
 ### Testing
 
 #### `hello`
@@ -775,8 +842,8 @@ try {
 
 | Area ID | Name | Providers | Transit Types | Fare Calculator |
 |---------|------|-----------|---------------|------------------|
-| `klang-valley` | Klang Valley | Rapid Rail KL, Rapid Bus KL, MRT Feeder | Bus, Rail | ❌ |
-| `penang` | Penang | Rapid Penang, Penang Ferry, KTM Komuter Utara | Bus, Ferry, Rail | ✅ |
+| `klang-valley` | Klang Valley | Rapid Rail KL, Rapid Bus KL, MRT Feeder | Bus, Rail | ❌ (Rapid KL fares not modelled) |
+| `penang` | Penang | Rapid Penang (incl. free CAT routes — RM 0), Penang Ferry, KTM Komuter Utara | Bus, Ferry, Rail | ✅ |
 | `kuantan` | Kuantan | Under Maintenance | Bus | ❌ |
 | `ipoh` | Ipoh | BAS.MY Ipoh, KTM Komuter Utara | Bus, Rail | ✅ |
 | `seremban` | Seremban | BAS.MY Seremban, KTM Intercity | Bus, Rail | ✅ |
@@ -785,7 +852,7 @@ try {
 | `kota-bharu` | Kota Bharu | BAS.MY Kota Bharu, KTM Intercity | Bus, Rail | ✅ |
 | `kuala-terengganu` | Kuala Terengganu | BAS.MY Kuala Terengganu | Bus | ✅ |
 | `melaka` | Melaka | BAS.MY Melaka | Bus | ✅ |
-| `johor` | Johor Bahru | BAS.MY Johor Bahru | Bus | ✅ |
+| `johor` | Johor Bahru | BAS.MY Johor Bahru + Bas Muafakat Johor (BMJ — 41 routes) | Bus | ✅ |
 | `kuching` | Kuching | BAS.MY Kuching | Bus | ✅ |
 | `kota-kinabalu` | Kota Kinabalu | Coming Soon | - | ❌ |
 
