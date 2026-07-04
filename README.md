@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/hithereiamaliff-mcp-malaysiatransit-badge.png)](https://mseep.ai/app/hithereiamaliff-mcp-malaysiatransit)
+
 # Malaysia Transit MCP
 
 MCP (Model Context Protocol) server for Malaysia's public transit system, providing real-time bus and train information across 10+ cities in Malaysia.
