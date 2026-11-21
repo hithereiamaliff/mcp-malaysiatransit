@@ -581,7 +581,7 @@ export function toText(value: unknown, indent = ''): string {
   if (Array.isArray(value)) {
     const items = value.map((item) => {
       const one = JSON.stringify(item);
-      return inner + (one.length <= 400 ? one : toText(item, inner));
+      return inner + (one.length <= 800 ? one : toText(item, inner));
     });
     return `[\n${items.join(',\n')}\n${indent}]`;
   }
