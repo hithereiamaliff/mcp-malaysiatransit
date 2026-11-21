@@ -40,7 +40,7 @@ MCP (Model Context Protocol) server for Malaysia's public transit system, provid
 - **Real-time Vehicle Tracking** - Live positions of buses and trains
 - **Stop Search & Information** - Find stops by name or location
 - **Route Discovery** - Browse available routes with destinations
-- **Arrival Predictions** - Get real-time arrival times at stops (shape-based, 40-60% more accurate)
+- **Arrival Times** - Real-time arrival times at stops, worked out from where each service's buses are and how fast they're moving now
 - **Schedule Information** - Get departure times, route schedules, and operating status
 - **Fare Calculator** - Calculate bus fares for BAS.MY and Rapid Penang routes
 - **Multi-Modal Support** - Bus, rail, and ferry services
@@ -56,6 +56,7 @@ MCP (Model Context Protocol) server for Malaysia's public transit system, provid
 - **🆕 Multi-Modal Journey Planner (Beta)** - `plan_journey` composes bus + rail + ferry + walking legs across Malaysia (Google Directions engine, locally-computed per-leg fares, AA1 cross-border, free CAT routes)
 - **🆕 Server-side Places Autocomplete** - `places_autocomplete` + `place_details` for resolving Malaysian place names with transit-aware airport overrides
 - **🆕 Fare Metadata** - `get_fare_structures` exposes BAS.MY / Penang / free CAT models so agents can explain how a fare is computed
+- **🆕 Trip History** - What buses actually did: departures, a stop's buses, what usually comes around a time of day, and one trip stop by stop. Recorded live since 21 November 2026, plus Rapid KL and MRT feeder days from 2025 rebuilt from Khazanah Research Institute's archive (always labelled and credited)
 
 ## Architecture
 
@@ -225,23 +226,23 @@ Get detailed information about a stop.
 - `stopId` (string): Stop ID from search results
 
 #### `get_stop_arrivals` ⭐
-Get real-time arrival predictions at a stop.
+Get real-time arrival times at a stop, worked out by Malaysia Transit's server from where the buses are (the same times as its website and apps).
 
 **Parameters:**
 - `area` (string): Service area ID
 - `stopId` (string): Stop ID from search results
 
-**Returns:** Includes a comprehensive disclaimer about prediction methodology, followed by arrival data with:
-- Calculation method (shape-based or straight-line)
-- Confidence level (high, medium, or low)
-- ETA in minutes
-- Vehicle information
+**Returns:** A note on how the times are worked out, then the arrival data, with for each bus:
+- ETA in minutes, the vehicle and its route
+- `calculationMethod` (`live-pace`, or `live-pace-straight-line` when the bus can't be placed on its line) and `confidence` (high, medium or low)
+- `paceKmh`, the running pace used
+- `notDeparted` and `departsAt` for a bus still at its trip's first stop
+- `tripMatch` for a bus running a trip its timetable doesn't have
 
-**Prediction Methodology:**
-- **Shape-Based Distance** (Preferred): Uses actual route geometry, accurate within ±2-4 minutes
-- **Straight-Line Distance** (Fallback): Conservative estimates with 1.4x multiplier
-- Includes GPS speed validation, time-of-day adjustments, and stop dwell time
-- Conservative bias: Better to arrive early than miss the bus
+**How the times are worked out:**
+- **Distance:** what's left along the trip's own line (straight line × 1.4 only when the bus can't be placed on it)
+- **Pace:** how fast the service's buses are actually moving now (their last 8 minutes' average, a little of the bus's own), running at about 1.5× that between stops plus about 15 s at each stop on the way; Ipoh, Kuching and the MRT feeders have their own, measured
+- No rush-hour factors (the live pace already includes the traffic); the age of the bus's last report is taken off
 
 **Example:**
 ```typescript
@@ -249,7 +250,7 @@ const arrivals = await tools.get_stop_arrivals({
   area: "penang",
   stopId: "stop_123"
 });
-// Returns disclaimer + arrival data with confidence levels
+// Returns the note + arrival data
 ```
 
 #### `find_nearby_stops`
@@ -661,6 +662,66 @@ Look up KTM Intercity (SH and ERT routes) fare. **NOTE:** Currently returns HTTP
 
 **Parameters:** None
 
+### Trip History (NEW)
+
+What buses actually did, from the middleware's `/api/history` (the same data as the [trip history page](https://malaysiatransit.techmavie.digital/trip-history.html)). Every answer starts with where its rows come from, and every row has a `source`:
+
+- **`live`** (and **`study`**, the arrival-time study's logs of that afternoon): recorded live by Malaysia Transit from the buses' positions (data.gov.my GTFS Realtime), since 21 November 2026, for every bus service with a live feed.
+- **`kri`**: days before that, for Rapid KL and MRT feeder buses only, rebuilt from Khazanah Research Institute's archive of their positions (2025), placed on today's routes and without timetabled times. Not recorded live by Malaysia Transit: the tools tell the AI to say so and to credit Gregory Ho Wai Son and Kelvin Ling Shyan Seng, *Greater Kuala Lumpur Mobilities*, Khazanah Research Institute (2025), [CC BY 3.0](https://www.krinstitute.org/publications/gklmob).
+
+`delayMinutes` is against the trip's own timetable (negative: early), and null where that doesn't apply: Rapid KL, Rapid Penang and BAS.MY Kuching buses don't run at their live trips' timetabled times, matched trips (`tripMatch`) and KRI's archive have none. Times are Malaysian. Answers list each row on one line (valid JSON) to keep them short.
+
+#### `get_trip_history_summary` ⭐
+All-time counts (recorded live and from the archive, apart), the archive's first and last day, today per service (trips, departures, complete, buses on the road, punctuality against the timetable), departures per hour and the latest departures.
+
+**Parameters:** None
+
+#### `get_trip_departures` ⭐
+The departures buses made from their route's first stop on one day: when each left, against the timetable, its first and last stop, whether it got there, and a `runId`. With counts over all of them (per route, per source, against the timetable).
+
+**Parameters:**
+- `area` (string): Service area ID (klang-valley, penang, kota-bharu, kuala-terengganu, alor-setar, kangar, ipoh, seremban, melaka, johor, kuching)
+- `date` (string, optional): YYYY-MM-DD, Malaysian service date (default: today)
+- `route` (string, optional): Route name ("T789", "D51") or route ID
+- `from`, `to` (string, optional): HH:MM window (after midnight as 24:00 to 27:59)
+- `order` (string, optional): `latest` (default today) or `earliest` (default for past days)
+- `limit` (number, optional): Rows to list (default 50, up to 200)
+
+#### `get_stop_trip_history`
+The buses that came to one stop on one day, and per route and way how many came, the first and last, and the usual gap between them.
+
+**Parameters:** `area`, `stopId`, and optionally `date`, `route`, `from`, `to`, `order`, `limit` (default 60)
+
+#### `get_stop_history_around_time` ⭐
+What usually comes to a stop around a time of day on past days: by default the same weekday over the last 4 weeks. Per day the buses and their delays; per route how many came, on how many days, and their median delay.
+
+**Parameters:**
+- `area`, `stopId` (string)
+- `time` (string): HH:MM
+- `weekday` (string, optional): `same` (the weekday of `until`, default) or `all`
+- `days` (number, optional): Days back to look (default 28, up to 56)
+- `window` (number, optional): Minutes either side (default 30)
+- `until` (string, optional): Look at the days before this date (default: today); for 2025 KRI days, a date then
+- `route` (string, optional)
+
+#### `get_trip_run`
+One bus's trip stop by stop: waiting at its first stop since, left at, each stop's time against the timetable, and how long it took.
+
+**Parameters:**
+- `runId` (string): From the other trip history tools
+
+**Example:**
+```typescript
+// Is the 7:30 bus at this stop usually late on weekdays?
+const usual = await tools.get_stop_history_around_time({
+  area: "kota-bharu",
+  stopId: "7906",
+  time: "07:30",
+  weekday: "all",
+  days: 14
+});
+```
+
 ### Testing
 
 #### `hello`
@@ -749,6 +810,20 @@ Users want to track their bus in real-time.
 4. AI filters for route T101
 5. AI responds: "Bus T101 is currently at [location], heading towards Airport"
 ```
+
+#### 3. "Is my bus usually on time?"
+
+Users want to know what buses actually did: today, on a past day, or usually at this time.
+
+**Workflow:**
+```
+1. User asks: "Is the D51 at Jerteh usually on time around 4:30 pm?"
+2. AI uses: search_stops({ area: "kota-bharu", query: "Jerteh" })
+3. AI uses: get_stop_history_around_time({ area: "kota-bharu", stopId: "...", time: "16:30", route: "D51", weekday: "all" })
+4. AI responds: "On the last 7 days the D51 left Jerteh at a median of 1 minute early..."
+```
+
+When rows come from KRI's archive (`source: "kri"`), the AI says they were rebuilt from Khazanah Research Institute's 2025 archive, not recorded live, and credits it.
 
 ### Tool Usage Patterns
 
@@ -984,6 +1059,9 @@ malaysiatransit-mcp/
 │   ├── index.ts              # Main MCP server entry point
 │   ├── http-server.ts        # Streamable HTTP server with analytics
 │   ├── transit.tools.ts      # Transit tool implementations
+│   ├── trip-history.tools.ts # Trip history tools (what buses actually did)
+│   ├── trip-history.format.ts # Trip history answers, trimmed, with their sources
+│   ├── middleware-api.ts     # Middleware URL and the MCP's identifying headers
 │   ├── geocoding.utils.ts    # Location detection utilities
 │   ├── inspector.ts          # MCP Inspector entry point
 │   └── server.ts             # HTTP server for testing

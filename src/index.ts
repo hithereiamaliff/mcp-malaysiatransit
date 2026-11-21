@@ -45,8 +45,17 @@ dotenv.config();
  *     - 'get_penang_ferry_terminals' - Terminal information
  *     - 'get_penang_ferry_fare' - Fare information
  * 
- * 12. All tools require an 'area' parameter (e.g., 'penang', 'klang-valley', 'ipoh')
- *     Exception: KTM and Ferry tools don't require area parameter
+ * 12. TRIP HISTORY TOOLS (what buses actually did):
+ *     - 'get_trip_history_summary' - All-time and today's counts, punctuality, latest departures
+ *     - 'get_trip_departures' - A day's departures from first stops (an area, a route)
+ *     - 'get_stop_trip_history' - The buses that came to a stop on a day
+ *     - 'get_stop_history_around_time' - What usually comes to a stop around a time of day
+ *     - 'get_trip_run' - One trip stop by stop
+ *     Rows with source 'kri' were NOT recorded live: they're rebuilt from Khazanah
+ *     Research Institute's 2025 archive (Rapid KL and MRT feeders). Say so, and credit it.
+ *
+ * 13. All tools require an 'area' parameter (e.g., 'penang', 'klang-valley', 'ipoh')
+ *     Exception: KTM, Ferry, and some trip history tools don't require area parameter
  * 
  * NOTE: This MCP identifies itself as 'Malaysia-Transit-MCP' to the middleware
  * for analytics tracking via the X-App-Name header.
@@ -72,7 +81,7 @@ export default function createStatelessServer({
 }) {
   const server = new McpServer({
     name: 'Malaysia Transit MCP Server',
-    version: '2.1.0',
+    version: '2.2.0',
   });
 
   // All configuration via environment variables

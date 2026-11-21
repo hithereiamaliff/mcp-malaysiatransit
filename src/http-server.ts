@@ -221,7 +221,7 @@ function getUptime(): string {
 // Create MCP server
 const mcpServer = new McpServer({
   name: 'Malaysia Transit MCP Server',
-  version: '2.1.0',
+  version: '2.2.0',
   // Note: Icon URL for clients that support it
   // https://malaysiatransit.techmavie.digital/malaysiatransitlogo/Malaysia%20Transit%20Logo%20(Transparent).png
 });
@@ -271,7 +271,7 @@ app.get('/health', (req: Request, res: Response) => {
   res.json({
     status: 'healthy',
     server: 'Malaysia Transit MCP',
-    version: '2.1.0',
+    version: '2.2.0',
     transport: 'streamable-http',
     firebase: firebaseAnalytics.isInitialized() ? 'connected' : 'disabled',
     middlewareUrl: MIDDLEWARE_URL,
@@ -899,7 +899,7 @@ app.get('/', (req: Request, res: Response) => {
   trackRequest(req, '/');
   res.json({
     name: 'Malaysia Transit MCP Server',
-    version: '2.1.0',
+    version: '2.2.0',
     description: 'MCP server for Malaysia public transit information',
     icon: 'https://malaysiatransit.techmavie.digital/malaysiatransitlogo/Malaysia%20Transit%20Logo%20(Transparent).png',
     transport: 'streamable-http',

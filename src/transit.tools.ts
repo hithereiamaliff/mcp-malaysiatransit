@@ -5,38 +5,10 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import axios, { AxiosRequestConfig } from 'axios';
+import axios from 'axios';
 import { detectAreaFromLocation, getAreaStateMapping } from './geocoding.utils.js';
-
-// MCP Client Identification Header
-// This identifies requests from Malaysia Transit MCP to the middleware analytics
-// X-Internal-Auth is used to bypass API key auth on the middleware (must match INTERNAL_APP_AUTH_TOKEN)
-const getMcpClientHeaders = (): Record<string, string> => {
-  const headers: Record<string, string> = {
-    'X-App-Name': 'Malaysia-Transit-MCP',
-  };
-
-  const internalAuthToken = process.env.INTERNAL_AUTH_TOKEN;
-  if (internalAuthToken) {
-    headers['X-Internal-Auth'] = internalAuthToken;
-  }
-
-  return headers;
-};
-
-// Get middleware URL from environment
-const getMiddlewareUrl = (): string => {
-  return process.env.MIDDLEWARE_URL || 'https://malaysiatransit.techmavie.digital';
-};
-
-// Create axios instance with MCP client identification
-const createApiConfig = (params?: Record<string, any>): AxiosRequestConfig => {
-  return {
-    headers: getMcpClientHeaders(),
-    params,
-    timeout: 15000, // 15 second timeout to prevent hanging requests
-  };
-};
+import { createApiConfig, getMcpClientHeaders, getMiddlewareUrl } from './middleware-api.js';
+import { registerTripHistoryTools } from './trip-history.tools.js';
 
 /**
  * Register all transit-related tools
@@ -263,7 +235,7 @@ export function registerTransitTools(server: McpServer): void {
 
   server.tool(
     'get_stop_arrivals',
-    'Get real-time arrival predictions for buses/trains at a specific stop',
+    'Get real-time arrival times for buses/trains at a specific stop, worked out by Malaysia Transit from where the buses are now',
     {
       area: z.coerce.string().describe('Service area ID (e.g., "penang", "klang-valley")'),
       stopId: z.coerce.string().describe('Stop ID from search results'),
@@ -272,43 +244,22 @@ export function registerTransitTools(server: McpServer): void {
       try {
         const response = await axios.get(`${getMiddlewareUrl()}/api/stops/${stopId}/arrivals`, createApiConfig({ area }));
         
-        // Prepare disclaimer message
+        // How the middleware works out these times (its lib/eta/ and middleware/shapeDistanceCalculator.js; docs/eta.md there)
         const disclaimer = `
-📊 ABOUT THESE ARRIVAL PREDICTIONS:
+📊 ABOUT THESE ARRIVAL TIMES:
 
-Our middleware calculates bus arrival times using custom-made algorithms:
+Malaysia Transit's server works out each live bus's time to the stop from where the buses are (the same times as its website and apps):
 
-1. Shape-Based Distance (Preferred):
-   • Uses actual route geometry from GTFS data
-   • Follows the real road path with curves and turns
-   • Accuracy: ±2-4 minutes compared to Google Maps/Moovit
-   • Indicated by: "calculationMethod": "shape-based", "confidence": "high" or "medium"
+1. Distance: how far the bus still has to go along its trip's own line (the route's shape, with its stops placed on it). Only when the bus can't be placed on its line, the straight line × 1.4 ("calculationMethod": "live-pace-straight-line" instead of "live-pace").
+2. Pace: how fast that service's buses are moving right now, from their average speed over the last 8 minutes, with a little (30%) of this bus's own. Between stops a bus runs at about 1.5× that average, plus about 15 seconds at each stop on the way (Ipoh, Kuching and the MRT feeders have their own pace and stop time, measured). Until enough of its buses are seen moving, the service's typical pace is used. No rush-hour factors: the live pace already includes today's traffic. "paceKmh" is the running pace used.
+3. The age of the bus's last position report is taken off (up to 3 minutes): it has carried on since.
 
-2. Straight-Line Distance (Fallback):
-   • Used when shape data unavailable or vehicle position uncertain
-   • Applies 1.4x multiplier to account for road curves
-   • More conservative (may show longer ETAs)
-   • Indicated by: "calculationMethod": "straight-line", "confidence": "low"
+Reading the fields:
+• "notDeparted": true: the bus is still at its trip's first stop. Say "not departed yet", not a firm time. "departsAt" (HH:MM, Malaysian time) is its timetabled departure when that's still ahead; its minutes count from then.
+• "tripMatch": the bus is running a trip its timetable doesn't have; its stops come from a trip of the same pattern or route.
+• "confidence": high (the bus is within 50 m of its line), medium (further off it), low (placed by the straight line).
 
-Key Features:
-✅ GPS Speed Validation: Rejects unrealistic speeds (>40 km/h for city buses)
-✅ Time-of-Day Adjustments: Rush hour predictions are 40-45% longer
-✅ Stop Dwell Time: Adds ~30 seconds per intermediate stop
-✅ Ghost Bus Filtering: Removes vehicles that have passed the stop
-
-Confidence Levels:
-• High: Shape-based, vehicle within 50m of route
-• Medium: Shape-based, vehicle 50-200m from route
-• Low: Straight-line fallback (no shape data available)
-
-Important Notes:
-⚠️ Predictions are conservative - buses may arrive earlier than estimated
-⚠️ Real-time traffic conditions (accidents, roadworks) are not factored in
-⚠️ Operator-provided predictions (TripUpdates) are not yet available from Malaysia's GTFS API (planned for 2026)
-
-Accuracy Comparison:
-• Our predictions: Within 2-4 minutes of Google Maps/Moovit
-• Conservative bias: Better to arrive early than miss the bus!
+Buses that have passed the stop are left out. Traffic incidents and roadworks can't be foreseen. What buses actually did on past days: get_stop_trip_history and get_stop_history_around_time.
 
 ---
 
@@ -2053,4 +2004,10 @@ JOURNEY FARE DETAILS:
       }
     }
   );
+
+  // ============================================================================
+  // TRIP HISTORY TOOLS (trip-history.tools.ts)
+  // ============================================================================
+
+  registerTripHistoryTools(server);
 }
