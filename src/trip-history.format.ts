@@ -543,7 +543,7 @@ export function shapeSummary(
         onTheRoad: s.onTheRoad,
         vsTimetable: s.timetableApplies
           ? s.vsTimetable
-          : "not compared: its buses don't run at their live trips' timetabled times",
+          : "not compared: it has a timetable, but its live data doesn't reliably say which departure each bus is running",
       })),
     },
     latestDepartures: ((data.latest as Row[]) || [])
