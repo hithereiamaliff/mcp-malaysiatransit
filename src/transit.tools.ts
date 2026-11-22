@@ -255,7 +255,7 @@ Malaysia Transit's server works out each live bus's time to the stop from where 
 3. The age of the bus's last position report is taken off (up to 3 minutes): it has carried on since.
 
 Reading the fields:
-• "notDeparted": true: the bus is still at its trip's first stop. Say "not departed yet", not a firm time. "departsAt" (HH:MM, Malaysian time) is its timetabled departure when that's still ahead; its minutes count from then.
+• "notDeparted": true: the bus hasn't set off on its trip yet: still at its trip's first stop, or (Kota Bharu, Kangar, Alor Setar, Kuala Terengganu) given a trip that starts 15 minutes or more from now, wherever it is. Say "not departed yet", not a firm time. "departsAt" (HH:MM, Malaysian time) is its timetabled departure when that's still ahead; its minutes count from then.
 • "tripMatch": the bus is running a trip its timetable doesn't have; its stops come from a trip of the same pattern or route.
 • "confidence": high (the bus is within 50 m of its line), medium (further off it), low (placed by the straight line).
 
